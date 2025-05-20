@@ -27,8 +27,8 @@ def send_reminder(task, followup=False):
         # Send message via Twilio WhatsApp
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         message = client.messages.create(
-            from_='whatsapp:' + TWILIO_PHONE_NUMBER,
-            to='whatsapp:' + USER_PHONE_NUMBER,
+            from_=TWILIO_PHONE_NUMBER,
+            to=USER_PHONE_NUMBER,
             body=message_body
         )
 
