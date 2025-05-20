@@ -39,15 +39,24 @@ def try_schedule_reminder(text):
 
         parsed_time = dateparser.parse(time_str,
                                        settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now()})
-        if parsed_time:
-            remind_time = ECUADOR_TZ.localize(parsed_time)
 
-        if remind_time < datetime.now():
+        if not parsed_time:
+            return "❌ Sorry, I couldn't understand the time you provided."
+
+            # Localize the parsed time if not already
+        if parsed_time.tzinfo is None:
+            remind_time = ECUADOR_TZ.localize(parsed_time)
+        else:
+            remind_time = parsed_time.astimezone(ECUADOR_TZ)
+
+            # Safely compare
+        now = datetime.now(ECUADOR_TZ)
+        if remind_time < now:
             logger.warning("Parsed time is in the past, not scheduling.")
             return "❌ That time already passed. Try 'in 1 minute' instead."
 
         if remind_time:
-            logger.info(f"Current time: {datetime.now()}")
+            logger.info(f"Current time: {now}")
             logger.info(f"Reminder time: {remind_time}")
 
             new_task = Task(description=task_desc, scheduled_time=remind_time)
