@@ -1,13 +1,11 @@
 import re
 import dateparser
-from flask import request
 
-from helpers.db import db, Task
-from helpers.job_utils import schedule_jobs_for_task, remove_jobs_for_task, schedule_still_working_tasks
-from helpers.reminder import send_reminder
-from helpers.scheduler import scheduler
+from db import db, Task
+from job_utils import schedule_jobs_for_task, remove_jobs_for_task, schedule_still_working_tasks
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
+import state as state
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +28,10 @@ def try_schedule_reminder(text):
         rest = parts[1]
         if " at " in rest:
             task_desc, time_str = rest.rsplit(" at ", 1)
+            time_str = normalize_time_string(time_str.strip())
         else:
             task_desc = rest
-            time_str = "in 1 minute"
+            time_str = "11:59 pm"
 
         remind_time = dateparser.parse(time_str, settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now()})
         if remind_time < datetime.now():
@@ -65,28 +64,11 @@ def process_text_command(text):
 
 
     elif text.lower() == "no":
-        # Try to extract task description from the previous message
-        incoming_msg = request.values.get("Body", "")
-
-        # Try to find the quoted task name in the last message
-        last_reminder = request.values.get("Context", "") or ""  # fallback if you use a custom context var
-        full_text = incoming_msg.strip().lower()
-
-
-        # Extract the quoted task name using regex
-        match = re.search(r"[‘'](.+?)[’']|\bfinish: ['\"](.+?)['\"]", incoming_msg, re.IGNORECASE)
-        task_desc = match.group(1) or match.group(2) if match else None
-
-        if not task_desc:
+        if not state.last_follow_up_task:
             return "❌ I couldn't figure out which task you're referring to."
 
-        # Look for the task in DB
-        task = Task.query.filter(Task.description.ilike(f"%{task_desc}%")).first()
-        if not task:
-            return f"❌ No task found matching '{task_desc}'."
-
-        schedule_still_working_tasks(task)
-        return f"🔁 Got it — I’ll check in again in 1 hour about '{task.description}'."
+        schedule_still_working_tasks(state.last_follow_up_task)
+        return f"🔁 Got it — I’ll check in again in 1 hour about '{state.last_follow_up_task.description}'."
 
     if text.lower() in ["what are my tasks", "list all tasks", "show my reminders", "list all reminders"]:
         tasks = Task.query.order_by(Task.scheduled_time.asc()).all()

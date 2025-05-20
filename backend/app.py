@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import logger
+from flask_cors import CORS
+
 from helpers.config import *
-from flask import Flask, request, render_template, url_for, redirect, jsonify
+from flask import Flask, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
 import os
 import requests
@@ -12,9 +14,7 @@ import logging
 from requests.auth import HTTPBasicAuth
 
 from helpers.job_utils import remove_jobs_for_task, schedule_jobs_for_task
-from helpers.reminder import send_reminder
-from helpers.reminder_parser import try_schedule_reminder, process_text_command
-from helpers.scheduler import scheduler
+from helpers.reminder_parser import process_text_command
 from helpers.transcriber import transcribe_audio
 from helpers.db import db, Task
 
@@ -27,6 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -64,7 +65,6 @@ def bot():
             filename = f"temp_{uuid.uuid4()}.{secure_filename(media_type.split('/')[-1])}"
 
             try:
-                # Download audio with timeout
                 r = requests.get(
                     media_url,
                     timeout=DOWNLOAD_TIMEOUT,
@@ -112,73 +112,74 @@ def bot():
 
     return str(resp)
 
-@app.route("/dashboard")
-def dashboard():
-    from datetime import datetime
-    tasks = Task.query.order_by(Task.scheduled_time).all()
-    return render_template("dashboard.html", tasks=tasks)
+@app.route("/api/tasks", methods=["GET"])
+def get_tasks():
+    tasks = Task.query.order_by(Task.scheduled_time.asc()).all()
+    return jsonify([{
+        "id": task.id,
+        "description": task.description,
+        "scheduled_time": task.scheduled_time.isoformat(),
+        "status": task.status
+    } for task in tasks])
 
-
-@app.route("/tasks/create", methods=["POST"])
-def create_task():
-    description = request.form["description"]
-    scheduled_time = datetime.strptime(request.form["scheduled_time"], "%Y-%m-%dT%H:%M")
+@app.route("/api/tasks/create", methods=["POST"])
+def api_create_task():
+    data = request.get_json()
+    description = data.get("description")
+    scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
 
     new_task = Task(description=description, scheduled_time=scheduled_time)
     db.session.add(new_task)
     db.session.commit()
 
-    # Schedule jobs after task has an ID
     schedule_jobs_for_task(new_task)
+    return jsonify({"message": "Task created", "id": new_task.id}), 201
 
-    return redirect(url_for("dashboard"))
-
-
-@app.route("/tasks/<int:task_id>/complete", methods=["POST"])
-def complete_task(task_id):
+@app.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
+def api_complete_task(task_id):
     task = Task.query.get_or_404(task_id)
-
-    # Remove associated jobs when task is marked done
     remove_jobs_for_task(task.id)
-
     task.status = "done"
     db.session.commit()
+    return jsonify({"message": f"Task {task.id} marked as done."})
 
-    return redirect(url_for("dashboard"))
-
-
-@app.route("/tasks/<int:task_id>/delete", methods=["POST"])
-def delete_task(task_id):
+@app.route("/api/tasks/<int:task_id>/reschedule", methods=["POST"])
+def api_reschedule_task(task_id):
     task = Task.query.get_or_404(task_id)
 
-    # Remove jobs before deleting task
-    remove_jobs_for_task(task.id)
-
-    db.session.delete(task)
-    db.session.commit()
-
-    return redirect(url_for("dashboard"))
-
-
-@app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
-def edit_task(task_id):
-    task = Task.query.get_or_404(task_id)
-
-    if request.method == "POST":
-        task.description = request.form["description"]
-        task.scheduled_time = datetime.strptime(request.form["scheduled_time"], "%Y-%m-%dT%H:%M")
-
-        if task.status == "done":
-            task.status = "pending"
-
+    if task.status == "done":
+        task.status = "pending"
         remove_jobs_for_task(task.id)
         db.session.commit()
         schedule_jobs_for_task(task)
 
-        return redirect(url_for("dashboard"))
+    return jsonify({
+        "message": f"Task {task.id} rescheduled",
+        "task_id": task.id,
+        "scheduled_time": task.scheduled_time.isoformat()
+    })
 
-    return render_template("edit_task.html", task=task)
+@app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
+def api_delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    remove_jobs_for_task(task.id)
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({"message": f"Task {task.id} deleted."})
 
+@app.route("/api/tasks/<int:task_id>", methods=["PUT"])
+def api_edit_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    data = request.get_json()
+    task.description = data.get("description", task.description)
+    task.scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
+    if task.status == "done":
+        task.status = "pending"
+
+    remove_jobs_for_task(task.id)
+    db.session.commit()
+    schedule_jobs_for_task(task)
+    return jsonify({"message": f"Task {task.id} updated."})
 
 @app.route("/jobs")
 def jobs():
@@ -191,7 +192,6 @@ def jobs():
     } for job in jobs]
 
     return jsonify(job_list)
-
 
 if __name__ == "__main__":
     with app.app_context():

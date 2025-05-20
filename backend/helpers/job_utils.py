@@ -1,7 +1,8 @@
 from datetime import timedelta, datetime
-from helpers.scheduler import scheduler
-from helpers.reminder import send_reminder
+from scheduler import scheduler
+from reminder import send_reminder_with_app
 import logging
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -11,21 +12,23 @@ def schedule_jobs_for_task(task):
     followup_time = task.scheduled_time + timedelta(hours=1)
     followup_id = f"followup_{task.id}_{int(followup_time.timestamp())}"
 
+    app = current_app._get_current_object()
+
     scheduler.add_job(
-        send_reminder,
-        'date',
+        send_reminder_with_app,
+        trigger='date',
         run_date=task.scheduled_time,
-        args=[task.description],
+        args=[task.description, app],
         id=reminder_id,
         name=f"Reminder for: {task.description}",
         replace_existing=True
     )
 
     scheduler.add_job(
-        send_reminder,
-        'date',
+        send_reminder_with_app,
+        trigger='date',
         run_date=followup_time,
-        args=[f"✅ Did you finish: '{task.description}'? Reply YES or NO"],
+        args=[f"✅ Did you finish: '{task.description}'? Reply YES or NO", app],
         id=followup_id,
         name=f"Follow-up for: {task.description}",
         replace_existing=True
@@ -41,15 +44,16 @@ def remove_jobs_for_task(task_id):
             logger.info(f"Removed job: {job.id}")
 
 def schedule_still_working_tasks(task):
-
     next_reminder_time = datetime.now() + timedelta(hours=1)
     reminder_id = f"followup_{task.id}_{int(next_reminder_time.timestamp())}"
 
+    app = current_app._get_current_object()
+
     scheduler.add_job(
-        send_reminder,
-        'date',
+        send_reminder_with_app,
+        trigger='date',
         run_date=next_reminder_time,
-        args=[f"🔁 Still working on: '{task.description}'? Reply YES or NO"],
+        args=[f"🔁 Still working on: '{task.description}'? Reply YES or NO", app],
         id=reminder_id,
         name=f"Follow-up loop for: {task.description}",
         replace_existing=False

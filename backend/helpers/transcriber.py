@@ -12,7 +12,7 @@ def transcribe_audio(audio_path):
                  .set_frame_rate(16000)  # 16 kHz
                  .set_sample_width(2)    # 2 bytes = 16 bits
                 )
-        # export as proper LINEAR16 WAV
+
         sound.export(wav_path, format="wav")
 
         client = speech.SpeechClient()
