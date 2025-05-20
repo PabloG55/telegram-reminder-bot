@@ -8,6 +8,8 @@ from helpers.scheduler import scheduler
 import logging
 from datetime import datetime
 import helpers.state as state
+import pytz
+ECUADOR_TZ = pytz.timezone("America/Guayaquil")
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,11 @@ def try_schedule_reminder(text):
             task_desc = rest
             time_str = "11:59 pm"
 
-        remind_time = dateparser.parse(time_str, settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now()})
+        parsed_time = dateparser.parse(time_str,
+                                       settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now()})
+        if parsed_time:
+            remind_time = ECUADOR_TZ.localize(parsed_time)
+
         if remind_time < datetime.now():
             logger.warning("Parsed time is in the past, not scheduling.")
             return "❌ That time already passed. Try 'in 1 minute' instead."

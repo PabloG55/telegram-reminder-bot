@@ -3,6 +3,8 @@ from helpers.scheduler import scheduler
 from helpers.reminder import send_reminder_with_app
 import logging
 from flask import current_app
+import pytz
+ECUADOR_TZ = pytz.timezone("America/Guayaquil")
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ def schedule_jobs_for_task(task):
     scheduler.add_job(
         send_reminder_with_app,
         trigger='date',
-        run_date=task.scheduled_time,
+        run_date=task.scheduled_time.astimezone(pytz.utc),
         args=[task.description, app],
         id=reminder_id,
         name=f"Reminder for: {task.description}",
@@ -27,7 +29,7 @@ def schedule_jobs_for_task(task):
     scheduler.add_job(
         send_reminder_with_app,
         trigger='date',
-        run_date=followup_time,
+        followup_time = task.scheduled_time.astimezone(ECUADOR_TZ) + timedelta(hours=1),
         args=[f"✅ Did you finish: '{task.description}'? Reply YES or NO", app],
         id=followup_id,
         name=f"Follow-up for: {task.description}",
