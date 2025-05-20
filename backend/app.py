@@ -3,8 +3,9 @@ from datetime import datetime
 import logger
 from flask_cors import CORS
 
+from backend.helpers.reminder import send_reminder
 from helpers.config import *
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Blueprint
 from twilio.twiml.messaging_response import MessagingResponse
 import os
 import requests
@@ -17,7 +18,8 @@ from helpers.job_utils import remove_jobs_for_task, schedule_jobs_for_task
 from helpers.reminder_parser import process_text_command
 from helpers.transcriber import transcribe_audio
 from helpers.db import db, Task
-
+import pytz
+ECUADOR_TZ = pytz.timezone("America/Guayaquil")
 # Configure logging only once
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+reminders_bp = Blueprint('reminders', __name__)
 CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tasks.db"
@@ -115,6 +118,25 @@ def bot():
         msg.body("❌ An unexpected error occurred.")
 
     return str(resp)
+
+
+@reminders_bp.route("/run-reminders")
+def run_reminders():
+    now = datetime.now(ECUADOR_TZ)
+
+    due_tasks = Task.query.filter(
+        Task.scheduled_time <= now,
+        Task.status.in_(["pending"])
+    ).all()
+
+    for task in due_tasks:
+        try:
+            send_reminder(task)
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"❌ Error sending reminder for task {task.id}: {e}")
+
+    return f"✅ Checked reminders at {now.strftime('%H:%M:%S')}. Sent: {len(due_tasks)}"
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
