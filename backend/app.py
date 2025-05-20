@@ -3,7 +3,7 @@ from datetime import datetime
 import logger
 from flask_cors import CORS
 
-from backend.helpers.reminder import send_reminder
+from helpers.reminder import send_reminder
 from helpers.config import *
 from flask import Flask, request, jsonify, Blueprint
 from twilio.twiml.messaging_response import MessagingResponse
