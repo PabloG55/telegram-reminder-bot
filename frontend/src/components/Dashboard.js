@@ -59,7 +59,9 @@ function Dashboard() {
   const handleComplete = async (id) => {
     try {
       await axios.post(`${BASE_URL}/api/tasks/${id}/complete`);
+      const audio = new Audio('/done.mp3');
       fetchTasks();
+      audio.play();
     } catch (error) {
       console.error("Failed to complete task:", error);
     }
@@ -68,7 +70,9 @@ function Dashboard() {
   const handleReschedule = async (id) => {
     try {
       await axios.post(`${BASE_URL}/api/tasks/${id}/reschedule`);
+      const audio = new Audio('/reschedule.mp3');
       fetchTasks(); // refresh the task list
+      audio.play();
     } catch (error) {
       console.error("Failed to reschedule task:", error);
       alert("❌ Rescheduling failed.");
@@ -150,7 +154,7 @@ function Dashboard() {
   return (
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <div className="flex items-center justify-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Jarvis Assistant</h1>
+          <h1 className="text-3xl font-bold text-gray-800">WappBot</h1>
         </div>
 
         <div className="bg-white rounded-lg shadow-md mb-8 overflow-hidden">
