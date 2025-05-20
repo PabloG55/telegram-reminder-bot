@@ -41,6 +41,7 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+
 # Configure constants
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB
 ALLOWED_AUDIO_TYPES = {'audio/wav', 'audio/mp3', 'audio/ogg'}
@@ -137,6 +138,9 @@ def run_reminders():
             logger.error(f"❌ Error sending reminder for task {task.id}: {e}")
 
     return f"✅ Checked reminders at {now.strftime('%H:%M:%S')}. Sent: {len(due_tasks)}"
+
+app.register_blueprint(reminders_bp)
+
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
