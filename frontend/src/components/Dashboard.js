@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
@@ -17,7 +18,7 @@ function Dashboard() {
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
-      const res = await axios.get('/api/tasks');
+      const res = await axios.get(`${BASE_URL}/api/tasks`);
       setTasks(res.data);
     } catch (error) {
       console.error("Failed to fetch tasks:", error);
@@ -34,7 +35,7 @@ function Dashboard() {
     const fullDatetime = `${finalDate}T${finalTime}`;
 
     try {
-      await axios.post('/api/tasks/create', {
+      await axios.post(`${BASE_URL}/api/tasks/create`, {
         description,
         scheduled_time: fullDatetime
       });
@@ -57,7 +58,7 @@ function Dashboard() {
 
   const handleComplete = async (id) => {
     try {
-      await axios.post(`/api/tasks/${id}/complete`);
+      await axios.post(`${BASE_URL}/api/tasks/${id}/complete`);
       fetchTasks();
     } catch (error) {
       console.error("Failed to complete task:", error);
@@ -66,7 +67,7 @@ function Dashboard() {
 
   const handleReschedule = async (id) => {
     try {
-      await axios.post(`/api/tasks/${id}/reschedule`);
+      await axios.post(`${BASE_URL}/api/tasks/${id}/reschedule`);
       fetchTasks(); // refresh the task list
     } catch (error) {
       console.error("Failed to reschedule task:", error);
@@ -76,7 +77,7 @@ function Dashboard() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/tasks/${id}`);
+      await axios.delete(`${BASE_URL}/api/tasks/${id}`);
       fetchTasks();
     } catch (error) {
       console.error("Failed to delete task:", error);

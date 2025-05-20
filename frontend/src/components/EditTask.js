@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function EditTask() {
   const { id } = useParams();
@@ -15,7 +16,7 @@ function EditTask() {
     const fetchTask = async () => {
       setIsLoading(true);
       try {
-        const res = await axios.get('/api/tasks');
+        const res = await axios.get(`${BASE_URL}/api/tasks`);
         const task = res.data.find(t => t.id === parseInt(id));
         if (task) {
           setDescription(task.description);
@@ -38,7 +39,7 @@ function EditTask() {
     if (!description.trim()) return;
 
     try {
-      await axios.put(`/api/tasks/${id}`, {
+      await axios.put(`${BASE_URL}/api/tasks/${id}`, {
         description,
         scheduled_time: scheduledTime
       });

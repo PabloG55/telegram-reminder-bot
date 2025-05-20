@@ -4,6 +4,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function CalendarView() {
   const [tasks, setTasks] = useState([]);
@@ -14,7 +15,7 @@ function CalendarView() {
     const fetchTasks = async () => {
       setIsLoading(true);
       try {
-        const res = await axios.get('/api/tasks');
+        const res = await axios.get(`${BASE_URL}/api/tasks`);
         setTasks(res.data);
       } catch (error) {
         console.error("Failed to fetch tasks:", error);
