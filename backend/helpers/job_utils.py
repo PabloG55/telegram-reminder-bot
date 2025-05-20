@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
-from scheduler import scheduler
-from reminder import send_reminder_with_app
+from helpers.scheduler import scheduler
+from helpers.reminder import send_reminder_with_app
 import logging
 from flask import current_app
 

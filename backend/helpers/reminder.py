@@ -2,9 +2,9 @@ import re
 import logging
 from twilio.rest import Client
 from flask import current_app as app
-import state as state
-from db import Task
-from config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, USER_PHONE_NUMBER
+import helpers.state as state
+from helpers.db import Task
+from helpers.config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, USER_PHONE_NUMBER
 
 logger = logging.getLogger(__name__)
 
