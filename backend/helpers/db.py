@@ -15,6 +15,7 @@ class Task(db.Model):
     reminder_sent = db.Column(db.Boolean, default=False)
     followup_sent = db.Column(db.Boolean, default=False)
     current_reminder_type = db.Column(db.String(50), default='initial')
+    reminder_sent_at = db.Column(db.DateTime)
 
     def __repr__(self):
         return f"<Task {self.id} - {self.description}>"

@@ -143,7 +143,7 @@ def run_reminders():
 
     # Follow-ups (1h after original reminder)
     followup_tasks = Task.query.filter(
-        Task.scheduled_time <= now - timedelta(hours=1),
+        Task.reminder_sent_at <= now - timedelta(hours=1),
         Task.status == "pending",
         Task.reminder_sent == True,
         Task.followup_sent == False
@@ -153,6 +153,7 @@ def run_reminders():
         try:
             send_reminder(task, followup=True)
             task.followup_sent = True
+            task.reminder_sent_at = now
             db.session.commit()
             sent_count += 1
         except Exception as e:
