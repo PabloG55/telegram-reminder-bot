@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import logger
 from flask_cors import CORS
@@ -124,20 +124,43 @@ def bot():
 @reminders_bp.route("/run-reminders")
 def run_reminders():
     now = datetime.now(ECUADOR_TZ)
+    sent_count = 0
 
-    due_tasks = Task.query.filter(
+    # Initial reminders
+    tasks = Task.query.filter(
         Task.scheduled_time <= now,
-        Task.status.in_(["pending"])
+        Task.status == "pending",
+        Task.reminder_sent == False
     ).all()
 
-    for task in due_tasks:
+    for task in tasks:
         try:
             send_reminder(task)
+            task.reminder_sent = True
             db.session.commit()
+            sent_count += 1
         except Exception as e:
             logger.error(f"❌ Error sending reminder for task {task.id}: {e}")
 
-    return f"✅ Checked reminders at {now.strftime('%H:%M:%S')}. Sent: {len(due_tasks)}"
+    # Follow-ups (1h after original reminder)
+    followup_tasks = Task.query.filter(
+        Task.scheduled_time <= now - timedelta(hours=1),
+        Task.status == "pending",
+        Task.reminder_sent == True,
+        Task.followup_sent == False
+    ).all()
+
+    for task in followup_tasks:
+        try:
+            send_reminder(task, followup=True)
+            task.followup_sent = True
+            db.session.commit()
+            sent_count += 1
+        except Exception as e:
+            logger.error(f"❌ Error sending follow-up for task {task.id}: {e}")
+
+    return f"✅ Checked reminders at {now.strftime('%H:%M:%S')}. Sent: {sent_count}"
+
 
 app.register_blueprint(reminders_bp)
 
