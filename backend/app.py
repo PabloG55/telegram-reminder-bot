@@ -144,7 +144,6 @@ def run_reminders():
     followup_tasks = Task.query.filter(
         Task.status == "pending",
         Task.reminder_sent == True,
-        Task.followup_sent == False
     ).all()
 
     for task in followup_tasks:

@@ -48,7 +48,7 @@ def remove_jobs_for_task(task_id):
             logger.info(f"Removed job: {job.id}")
 
 def schedule_still_working_tasks(task):
-    next_reminder_time = datetime.now(pytz.utc) + timedelta(hours=1)
+    next_reminder_time = datetime.now(pytz.utc) + timedelta(minutes=1)
     reminder_id = f"followup_{task.id}_{int(next_reminder_time.timestamp())}"
 
     app = current_app._get_current_object()
