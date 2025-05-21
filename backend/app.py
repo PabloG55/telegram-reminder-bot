@@ -135,6 +135,7 @@ def run_reminders():
         try:
             send_reminder(task)
             task.reminder_sent = True
+            task.reminder_sent_at = now
             db.session.commit()
             sent_count += 1
         except Exception as e:
@@ -144,6 +145,7 @@ def run_reminders():
     followup_tasks = Task.query.filter(
         Task.status == "pending",
         Task.reminder_sent == True,
+        Task.reminder_sent_at <= now - timedelta(minutes=1)
     ).all()
 
     for task in followup_tasks:
