@@ -22,7 +22,7 @@ def send_reminder(task, followup=False):
         if followup:
             message_body = f"✅ Did you finish: '{task.description}'? Reply YES or NO"
         else:
-            message_body = f"🔔 Reminder: {task.description}"
+            message_body = f"🔔 Reminder: '{task.description}'"
 
         # Send message via Twilio WhatsApp
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)

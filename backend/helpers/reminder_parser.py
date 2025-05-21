@@ -77,7 +77,17 @@ def process_text_command(text):
     logger.info(f"Processing text: {text}")
 
     if text.lower() == "yes":
-        return "✅ Great! Task marked as done."
+        task_id = state.last_follow_up_task_id
+        if not task_id:
+            return "❌ I couldn't figure out which task you're referring to."
+        task = Task.query.get(task_id)
+        if not task:
+            return "❌ Could not retrieve the task."
+        remove_jobs_for_task(task.id)
+        task.status = "done"
+        db.session.commit()
+        return f"✅ Great! '{task.description}' marked as done."
+
 
 
     elif text.lower() == "no":
