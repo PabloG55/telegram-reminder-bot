@@ -15,8 +15,8 @@ def send_reminder(task, followup=False):
         with app.app_context():
             # Save task in global state if it's a follow-up (for response tracking)
             if followup:
-                state.last_follow_up_task = task
-                logger.info(f"🔁 Set last_follow_up_task to: {task.description}")
+                state.last_follow_up_task_id = task.id
+                logger.info(f"🔁 Set last_follow_up_task_id to: {task.description}")
 
         # Prepare message text
         if followup:

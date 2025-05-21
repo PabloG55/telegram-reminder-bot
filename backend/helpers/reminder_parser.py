@@ -81,11 +81,16 @@ def process_text_command(text):
 
 
     elif text.lower() == "no":
-        if not state.last_follow_up_task:
+        task_id = state.last_follow_up_task_id
+        if not task_id:
             return "❌ I couldn't figure out which task you're referring to."
 
-        schedule_still_working_tasks(state.last_follow_up_task)
-        return f"🔁 Got it — I’ll check in again in 1 hour about '{state.last_follow_up_task.description}'."
+        task = Task.query.get(task_id)
+        if not task:
+            return "❌ Could not retrieve the task."
+
+        schedule_still_working_tasks(task)
+        return f"🔁 Got it — I’ll check in again in 1 hour about '{task.description}'."
 
     if text.lower() in ["what are my tasks", "list all tasks", "show my reminders", "list all reminders"]:
         tasks = Task.query.order_by(Task.scheduled_time.asc()).all()
