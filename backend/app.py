@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import logger
 from flask_cors import CORS
 
-from helpers.reminder import send_reminder
+from helpers.reminder_sender import send_reminder
 from helpers.config import *
 from flask import Flask, request, jsonify, Blueprint
 from twilio.twiml.messaging_response import MessagingResponse
@@ -39,7 +39,6 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
-
 
 # Configure constants
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB

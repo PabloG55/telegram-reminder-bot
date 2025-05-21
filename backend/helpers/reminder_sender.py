@@ -40,5 +40,4 @@ def send_reminder(task, followup=False):
 
 
 def send_reminder_with_app(task, app):
-    with app.app_context():
-        send_reminder(task)
+    logger.info(f"📤 Sending reminder for task: {task}")
