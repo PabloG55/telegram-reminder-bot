@@ -142,7 +142,6 @@ def run_reminders():
 
     # Follow-ups (1h after original reminder)
     followup_tasks = Task.query.filter(
-        Task.reminder_sent_at <= now - timedelta(hours=1),
         Task.status == "pending",
         Task.reminder_sent == True,
         Task.followup_sent == False
