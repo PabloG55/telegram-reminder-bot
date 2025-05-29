@@ -44,80 +44,77 @@ with app.app_context():
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB
 ALLOWED_AUDIO_TYPES = {'audio/wav', 'audio/mp3', 'audio/ogg'}
 DOWNLOAD_TIMEOUT = 30  # seconds
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 @app.route("/bot", methods=["POST"])
 def bot():
-    logger.info("Incoming Twilio payload:")
-    for k, v in request.values.items():
-        logger.info(f"  {k}: {v}")
-    resp = MessagingResponse()
-    msg = resp.message()
+    data = request.get_json()
+    logger.info("📥 Incoming Telegram payload:")
+    logger.info(data)
 
     try:
-        num_media = int(request.values.get("NumMedia", 0))
+        message = data.get("message", {})
+        chat_id = message.get("chat", {}).get("id")
 
-        if num_media > 0:
-            media_url = request.values.get("MediaUrl0")
-            media_type = request.values.get("MediaContentType0")
+        if not chat_id:
+            return jsonify({"ok": True})  # Ignore if no chat
 
-            if not media_type.startswith("audio/"):
-                msg.body("Sorry, I only handle audio messages right now.")
-                return str(resp)
+        # Handle voice messages
+        if "voice" in message:
+            file_id = message["voice"]["file_id"]
 
-            if media_type not in ALLOWED_AUDIO_TYPES:
-                msg.body("Sorry, I can only process WAV, MP3, or OGG audio messages.")
-                return str(resp)
+            # Step 1: Get file path from Telegram
+            file_info = requests.get(f"{TELEGRAM_API_URL}/getFile?file_id={file_id}").json()
+            file_path = file_info["result"]["file_path"]
+            file_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}"
 
-            filename = f"temp_{uuid.uuid4()}.{secure_filename(media_type.split('/')[-1])}"
+            # Download the voice file
+            r = requests.get(file_url, timeout=DOWNLOAD_TIMEOUT)
+            r.raise_for_status()
 
-            try:
-                r = requests.get(
-                    media_url,
-                    timeout=DOWNLOAD_TIMEOUT,
-                    auth=HTTPBasicAuth(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-                )
-                r.raise_for_status()
-
-                if len(r.content) > MAX_CONTENT_LENGTH:
-                    msg.body("Sorry, the audio file is too large. Please send a shorter message.")
-                    return str(resp)
-
+            # Check file size
+            if len(r.content) > MAX_CONTENT_LENGTH:
+                reply = "❌ Sorry, the audio file is too large. Please send a shorter message."
+            else:
+                # Save the file
+                filename = f"temp_{uuid.uuid4()}.ogg"
                 with open(filename, "wb") as f:
                     f.write(r.content)
 
-                transcription = transcribe_audio(filename)
-                result = process_text_command(transcription)
-                if result:
-                    msg.body(result)
-                else:
-                    msg.body(f"You said: \"{transcription}\"")
+                try:
+                    # Transcribe and process
+                    transcription = transcribe_audio(filename)
+                    result = process_text_command(transcription)
+                    reply = result or f"❌ I couldn't understand: \"{transcription}\""
+                except Exception as e:
+                    logger.error(f"❌ Error processing audio: {str(e)}")
+                    reply = "❌ Sorry, I couldn't process your voice message."
+                finally:
+                    if os.path.exists(filename):
+                        os.remove(filename)
 
-
-            except requests.RequestException as e:
-                logger.error(f"Error downloading audio: {str(e)}")
-                msg.body("❌ Sorry, I couldn't download your voice message.")
-            except Exception as e:
-                logger.error(f"Error processing audio: {str(e)}")
-                msg.body("❌ Sorry, I couldn't process your voice message.")
-            finally:
-                if os.path.exists(filename):
-                    os.remove(filename)
         else:
-            body = request.values.get("Body", "").strip()
-            result = process_text_command(body)
-            logger.info(f"Message body going to Twilio: {result}")
-            if result:
-                msg.body(result)
-            else:
-                msg.body(f"You said: \"{body}\"")
+            # Handle text messages
+            text = message.get("text", "").strip()
+            result = process_text_command(text)
+            reply = result or f"❌ I couldn't understand: \"{text}\""
 
+        # Send reply to user
+        requests.post(f"{TELEGRAM_API_URL}/sendMessage", json={
+            "chat_id": chat_id,
+            "text": reply
+        })
 
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        msg.body("❌ An unexpected error occurred.")
+        logger.error(f"❌ Unexpected error in /bot: {str(e)}")
+        # Try to send fallback error
+        if "chat_id" in locals():
+            requests.post(f"{TELEGRAM_API_URL}/sendMessage", json={
+                "chat_id": chat_id,
+                "text": "❌ An unexpected error occurred."
+            })
 
-    return str(resp)
-
+    return jsonify({"ok": True})
 
 @reminders_bp.route("/run-reminders")
 def run_reminders():
