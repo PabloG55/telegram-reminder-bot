@@ -38,3 +38,6 @@ def send_reminder(task, followup=False):
     except Exception as e:
         logger.error(f"❌ Error sending Telegram reminder for task {task.id}: {str(e)}")
         raise
+
+def send_reminder_with_app(task, app):
+    logger.info(f"📤 Sending reminder for task: {task}")
