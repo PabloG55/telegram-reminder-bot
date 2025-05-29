@@ -1,10 +1,9 @@
-import re
+import requests
 import logging
-from twilio.rest import Client
 from flask import current_app as app
 import helpers.state as state
 from helpers.db import Task
-from helpers.config import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, USER_PHONE_NUMBER
+from helpers.config import TELEGRAM_BOT_TOKEN, TELEGRAM_USER_ID
 
 logger = logging.getLogger(__name__)
 
@@ -13,31 +12,29 @@ def send_reminder(task, followup=False):
 
     try:
         with app.app_context():
-            # Save task in global state if it's a follow-up (for response tracking)
             if followup:
                 state.last_follow_up_task_id = task.id
                 logger.info(f"🔁 Set last_follow_up_task_id to: {task.description}")
 
-        # Prepare message text
+        # Prepare message
         if followup:
             message_body = f"✅ Did you finish: '{task.description}'? Reply YES or NO"
         else:
             message_body = f"🔔 Reminder: '{task.description}'"
 
-        # Send message via Twilio WhatsApp
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        message = client.messages.create(
-            from_=TWILIO_PHONE_NUMBER,
-            to=USER_PHONE_NUMBER,
-            body=message_body
-        )
+        # Send message via Telegram
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_USER_ID,
+            "text": message_body
+        }
+        response = requests.post(url, json=payload)
 
-        logger.info(f"✅ Message sent (SID: {message.sid})")
+        if response.ok:
+            logger.info("✅ Message sent successfully via Telegram")
+        else:
+            logger.error(f"❌ Failed to send Telegram message: {response.text}")
 
     except Exception as e:
-        logger.error(f"❌ Failed to send reminder for task {task.id}: {str(e)}")
+        logger.error(f"❌ Error sending Telegram reminder for task {task.id}: {str(e)}")
         raise
-
-
-def send_reminder_with_app(task, app):
-    logger.info(f"📤 Sending reminder for task: {task}")
