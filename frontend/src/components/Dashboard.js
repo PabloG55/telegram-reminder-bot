@@ -4,8 +4,15 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-const tg_id = new URLSearchParams(window.location.search).get("tg_id")
-    || localStorage.getItem("tg_id");
+const tg_id = (() => {
+  const idFromUrl = new URLSearchParams(window.location.search).get("tg_id");
+  if (idFromUrl) {
+    localStorage.setItem("tg_id", idFromUrl);  // ✅ Store it for next time
+    return idFromUrl;
+  }
+  return localStorage.getItem("tg_id");
+})();
+
 
 
 function Dashboard() {
