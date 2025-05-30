@@ -13,8 +13,8 @@ def send_reminder(task, followup=False):
     try:
         with app.app_context():
             if followup:
-                state.last_follow_up_task_id = task.id
-                logger.info(f"🔁 Set last_follow_up_task_id to: {task.description}")
+                state.last_follow_up_task_ids[task.user_id] = task.id
+                logger.info(f"🔁 Set last_follow_up_task_ids[{task.user_id}] = {task.id} for '{task.description}'")
 
         # Prepare message
         if followup:
@@ -25,7 +25,7 @@ def send_reminder(task, followup=False):
         # Send message via Telegram
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
-            "chat_id": TELEGRAM_USER_ID,
+            "chat_id": task.user_id,
             "text": message_body
         }
         response = requests.post(url, json=payload)

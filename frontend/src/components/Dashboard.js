@@ -7,7 +7,7 @@ const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const tg_id = (() => {
   const idFromUrl = new URLSearchParams(window.location.search).get("tg_id");
   if (idFromUrl) {
-    localStorage.setItem("tg_id", idFromUrl);  // ✅ Store it for next time
+    localStorage.setItem("tg_id", idFromUrl);  // Store it for next time
     return idFromUrl;
   }
   return localStorage.getItem("tg_id");
@@ -75,7 +75,9 @@ function Dashboard() {
 
   const handleComplete = async (id) => {
     try {
-      await axios.post(`${BASE_URL}/api/tasks/${id}/complete`);
+      await axios.post(`${BASE_URL}/api/tasks/${id}/complete`, {
+        user_id: tg_id
+      });
       const audio = new Audio('/done.mp3');
       fetchTasks();
       audio.play();
@@ -86,7 +88,9 @@ function Dashboard() {
 
   const handleReschedule = async (id) => {
     try {
-      await axios.post(`${BASE_URL}/api/tasks/${id}/reschedule`);
+      await axios.post(`${BASE_URL}/api/tasks/${id}/reschedule`, {
+        user_id: tg_id
+      });
       const audio = new Audio('/reschedule.mp3');
       fetchTasks(); // refresh the task list
       audio.play();
@@ -98,7 +102,9 @@ function Dashboard() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${BASE_URL}/api/tasks/${id}`);
+      await axios.delete(`${BASE_URL}/api/tasks/${id}`, {
+        params: { user_id: tg_id }
+      });
       fetchTasks();
     } catch (error) {
       console.error("Failed to delete task:", error);

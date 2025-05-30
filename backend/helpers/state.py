@@ -1,1 +1,1 @@
-last_follow_up_task_id = None
+last_follow_up_task_ids = {}

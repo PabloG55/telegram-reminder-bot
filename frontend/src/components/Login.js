@@ -4,7 +4,6 @@ const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function Login() {
     useEffect(() => {
-        // Clear any existing login container content
         const container = document.getElementById("telegram-login-container");
         if (container) {
             container.innerHTML = "";
@@ -18,7 +17,7 @@ function Login() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(user),
-                credentials: 'include' // Add this for CORS if needed
+                credentials: 'include'
             })
                 .then((res) => {
                     console.log("Response status:", res.status);
@@ -28,7 +27,6 @@ function Login() {
                     console.log("🎯 Response from backend:", data);
                     if (data.ok) {
                         localStorage.setItem("tg_id", data.telegram_id);
-                        // Use React Router navigation instead of window.location
                         window.location.href = "/dashboard";
                     } else {
                         alert("Login failed: " + (data.error || "unknown error"));
@@ -40,7 +38,7 @@ function Login() {
                 });
         };
 
-        // Add a small delay to ensure DOM is ready
+        // Small delay to ensure DOM is ready
         setTimeout(() => {
             const script = document.createElement("script");
             script.src = "https://telegram.org/js/telegram-widget.js?22"; // Updated version
@@ -51,7 +49,7 @@ function Login() {
             script.setAttribute("data-onauth", "handleTelegramAuth(user)"); // Fixed syntax
             script.async = true;
 
-            // Add error handling for script loading
+            // Error handling for script loading
             script.onerror = () => {
                 console.error("Failed to load Telegram widget script");
                 alert("Failed to load Telegram login widget. Please check your internet connection.");
@@ -69,9 +67,7 @@ function Login() {
             }
         }, 100);
 
-        // Cleanup function
         return () => {
-            // Clean up the global function when component unmounts
             if (window.handleTelegramAuth) {
                 delete window.handleTelegramAuth;
             }
@@ -88,33 +84,11 @@ function Login() {
                     Log in with Telegram to access your task dashboard.
                 </p>
 
-                {/* Debug info */}
-                <div className="text-xs text-gray-500 mb-4 text-center">
-                    Base URL: {BASE_URL}
-                </div>
-
                 <div id="telegram-login-container" className="flex justify-center min-h-[50px]">
                     <div className="text-center text-gray-500">
                         Loading Telegram login...
                     </div>
                 </div>
-
-                {/* Manual debug button for testing */}
-                <button
-                    onClick={() => {
-                        console.log("Testing connection to:", `${BASE_URL}/api/login`);
-                        fetch(`${BASE_URL}/api/login`, {
-                            method: "OPTIONS"
-                        }).then(res => {
-                            console.log("OPTIONS response:", res.status);
-                        }).catch(err => {
-                            console.error("Connection test failed:", err);
-                        });
-                    }}
-                    className="mt-4 w-full px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-                >
-                    Test API Connection
-                </button>
             </div>
         </div>
     );

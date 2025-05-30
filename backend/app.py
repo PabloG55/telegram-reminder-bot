@@ -147,7 +147,7 @@ def bot():
                 try:
                     # Transcribe and process
                     transcription = transcribe_audio(filename)
-                    result = process_text_command(transcription)
+                    result = process_text_command(transcription, telegram_id=chat_id)
                     reply = result or f"❌ I couldn't understand: \"{transcription}\""
                 except Exception as e:
                     logger.error(f"❌ Error processing audio: {str(e)}")
@@ -159,7 +159,7 @@ def bot():
         else:
             # Handle text messages
             text = message.get("text", "").strip()
-            result = process_text_command(text)
+            result = process_text_command(text, telegram_id=chat_id)
             reply = result or f"❌ I couldn't understand: \"{text}\""
 
         # Send reply to user
@@ -240,7 +240,20 @@ def api_create_task():
     description = data.get("description")
     scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
 
-    new_task = Task(description=description, scheduled_time=scheduled_time)
+    telegram_id = data.get("user_id")
+    if not telegram_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    user = User.query.filter_by(telegram_id=telegram_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    new_task = Task(
+        description=description,
+        scheduled_time=scheduled_time,
+        user_id=user.telegram_id
+    )
+
     db.session.add(new_task)
     db.session.commit()
 
@@ -249,7 +262,12 @@ def api_create_task():
 
 @app.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
 def api_complete_task(task_id):
+    telegram_id = request.json.get("user_id")
     task = Task.query.get_or_404(task_id)
+
+    if str(task.user_id) != str(telegram_id):
+        return jsonify({"error": "Unauthorized access"}), 403
+
     remove_jobs_for_task(task.id)
     task.status = "done"
     db.session.commit()
@@ -257,7 +275,11 @@ def api_complete_task(task_id):
 
 @app.route("/api/tasks/<int:task_id>/reschedule", methods=["POST"])
 def api_reschedule_task(task_id):
+    telegram_id = request.json.get("user_id")
     task = Task.query.get_or_404(task_id)
+
+    if str(task.user_id) != str(telegram_id):
+        return jsonify({"error": "Unauthorized access"}), 403
 
     if task.status == "done":
         task.status = "pending"
@@ -271,20 +293,33 @@ def api_reschedule_task(task_id):
         "scheduled_time": task.scheduled_time.isoformat()
     })
 
+
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 def api_delete_task(task_id):
+    telegram_id = request.args.get("user_id")
     task = Task.query.get_or_404(task_id)
+
+    if str(task.user_id) != str(telegram_id):
+        return jsonify({"error": "Unauthorized access"}), 403
+
     remove_jobs_for_task(task.id)
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": f"Task {task.id} deleted."})
 
+
 @app.route("/api/tasks/<int:task_id>", methods=["PUT"])
 def api_edit_task(task_id):
-    task = Task.query.get_or_404(task_id)
     data = request.get_json()
+    telegram_id = data.get("user_id")
+    task = Task.query.get_or_404(task_id)
+
+    if str(task.user_id) != str(telegram_id):
+        return jsonify({"error": "Unauthorized access"}), 403
+
     task.description = data.get("description", task.description)
     task.scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
+
     if task.status == "done":
         task.status = "pending"
 

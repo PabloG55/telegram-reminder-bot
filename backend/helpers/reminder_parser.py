@@ -20,7 +20,7 @@ def normalize_time_string(time_str):
         return f"{match.group(1)}:{match.group(2)} {match.group(3)}"
     return time_str
 
-def try_schedule_reminder(text):
+def try_schedule_reminder(text, telegram_id):
     logger.info(f"Processing text: {text}")
     if text.lower().startswith("remind me"):
         logger.info("Found 'remind me' command")
@@ -59,7 +59,7 @@ def try_schedule_reminder(text):
             logger.info(f"Current time: {now}")
             logger.info(f"Reminder time: {remind_time}")
 
-            new_task = Task(description=task_desc, scheduled_time=remind_time)
+            new_task = Task(description=task_desc, scheduled_time=remind_time, user_id=telegram_id)
             db.session.add(new_task)
             db.session.commit()
 
@@ -72,12 +72,13 @@ def try_schedule_reminder(text):
 
 
 
-def process_text_command(text):
+def process_text_command(text, telegram_id):
+    telegram_id = int(telegram_id)
     text = text.strip()
     logger.info(f"Processing text: {text}")
 
     if text.lower() == "yes":
-        task_id = state.last_follow_up_task_id
+        task_id = state.last_follow_up_task_ids.pop(telegram_id, None)
         if not task_id:
             return "❌ I couldn't figure out which task you're referring to."
         task = Task.query.get(task_id)
@@ -91,7 +92,7 @@ def process_text_command(text):
 
 
     elif text.lower() == "no":
-        task_id = state.last_follow_up_task_id
+        task_id = state.last_follow_up_task_ids.pop(telegram_id, None)
         if not task_id:
             return "❌ I couldn't figure out which task you're referring to."
 
@@ -103,7 +104,7 @@ def process_text_command(text):
         return f"🔁 Got it — I’ll check in again in 1 hour about '{task.description}'."
 
     if text.lower() in ["what are my tasks", "list all tasks", "show my reminders", "list all reminders"]:
-        tasks = Task.query.order_by(Task.scheduled_time.asc()).all()
+        tasks = Task.query.filter_by(user_id=telegram_id).order_by(Task.scheduled_time.asc()).all()
         if not tasks:
             return "📭 You have no tasks right now."
 
@@ -116,7 +117,10 @@ def process_text_command(text):
     if text.lower().startswith("delete "):
         try:
             description = text[7:].strip().lower()
-            task = Task.query.filter(Task.description.ilike(f"%{description}%")).first()
+            task = Task.query.filter(
+                Task.user_id == telegram_id,
+                Task.description.ilike(f"%{description}%")
+            ).first()
 
             if task:
                 remove_jobs_for_task(task.id)
@@ -139,7 +143,10 @@ def process_text_command(text):
 
             task_desc = match.group(1).strip()
             time_str = normalize_time_string(match.group(2).strip())
-            task = Task.query.filter(Task.description.ilike(f"%{task_desc}%")).first()
+            task = Task.query.filter(
+                Task.user_id == telegram_id,
+                Task.description.ilike(f"%{task_desc}%")
+            ).first()
 
             if not task:
                 return f"❌ No task found matching '{task_desc}'."
@@ -169,7 +176,10 @@ def process_text_command(text):
     elif text.lower().startswith("complete "):
         try:
             description = text[9:].strip().lower()
-            task = Task.query.filter(Task.description.ilike(f"%{description}%")).first()
+            task = Task.query.filter(
+                Task.user_id == telegram_id,
+                Task.description.ilike(f"%{description}%")
+            ).first()
 
             if task:
                 remove_jobs_for_task(task.id)
