@@ -9,13 +9,10 @@ from flask_cors import CORS
 from helpers.reminder_sender import send_reminder
 from helpers.config import *
 from flask import Flask, request, jsonify, Blueprint
-from twilio.twiml.messaging_response import MessagingResponse
 import os
 import requests
 import uuid
-from werkzeug.utils import secure_filename
 import logging
-from requests.auth import HTTPBasicAuth
 
 from helpers.job_utils import remove_jobs_for_task, schedule_jobs_for_task
 from helpers.reminder_parser import process_text_command
