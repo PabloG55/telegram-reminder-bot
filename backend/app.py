@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 reminders_bp = Blueprint('reminders', __name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
