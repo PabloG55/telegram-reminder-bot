@@ -1,32 +1,32 @@
 import React, { useEffect } from "react";
 const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// 🟢 ✅ 1. Define globally BEFORE component renders
-window.handleTelegramAuth = (user) => {
-    console.log("✅ Telegram user:", user);
-    fetch(`${BASE_URL}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(user)
-    })
-        .then((res) => res.json())
-        .then((data) => {
-            if (data.ok) {
-                localStorage.setItem("tg_id", data.telegram_id);
-                window.location.href = "/dashboard"; // keep it simple for now
-            } else {
-                alert("Login failed: " + (data.error || "unknown error"));
-            }
-        })
-        .catch((err) => {
-            console.error("Login error:", err);
-            alert("Something went wrong. Check console.");
-        });
-};
-
 function Login() {
     useEffect(() => {
-        // 🟢 ✅ 2. Inject the Telegram login script AFTER defining handler
+        window.handleTelegramAuth = (user) => {
+            console.log("✅ Telegram user:", user);
+
+            fetch(`${BASE_URL}/api/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(user)
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    console.log("🎯 Response from backend:", data);
+                    if (data.ok) {
+                        localStorage.setItem("tg_id", data.telegram_id);
+                        window.location.href = "/dashboard";
+                    } else {
+                        alert("Login failed: " + (data.error || "unknown error"));
+                    }
+                })
+                .catch((err) => {
+                    console.error("❌ Login error:", err);
+                    alert("Something went wrong. Check console.");
+                });
+        };
+
         const script = document.createElement("script");
         script.src = "https://telegram.org/js/telegram-widget.js?7";
         script.setAttribute("data-telegram-login", "botifier5_bot");
@@ -37,13 +37,18 @@ function Login() {
         script.async = true;
 
         const container = document.getElementById("telegram-login-container");
-        if (container) container.appendChild(script);
+        if (container) {
+            container.innerHTML = "";
+            container.appendChild(script);
+        }
     }, []);
 
     return (
         <div className="h-screen bg-gray-100 flex flex-col justify-center items-center px-4">
             <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-                <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Welcome to Botifier</h1>
+                <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+                    Welcome to Botifier
+                </h1>
                 <p className="text-center text-gray-600 mb-4">
                     Log in with Telegram to access your task dashboard.
                 </p>
