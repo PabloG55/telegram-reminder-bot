@@ -1,8 +1,31 @@
 import React, { useEffect } from "react";
 
+// 🟢 ✅ 1. Define globally BEFORE component renders
+window.handleTelegramAuth = (user) => {
+    console.log("✅ Telegram user:", user);
+    fetch("https://whatsapp-reminder-backend.onrender.com/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user)
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            if (data.ok) {
+                localStorage.setItem("tg_id", data.telegram_id);
+                window.location.href = "/dashboard"; // keep it simple for now
+            } else {
+                alert("Login failed: " + (data.error || "unknown error"));
+            }
+        })
+        .catch((err) => {
+            console.error("Login error:", err);
+            alert("Something went wrong. Check console.");
+        });
+};
+
 function Login() {
     useEffect(() => {
-        // Inject Telegram login widget
+        // 🟢 ✅ 2. Inject the Telegram login script AFTER defining handler
         const script = document.createElement("script");
         script.src = "https://telegram.org/js/telegram-widget.js?7";
         script.setAttribute("data-telegram-login", "botifier5_bot");
@@ -11,31 +34,9 @@ function Login() {
         script.setAttribute("data-request-access", "write");
         script.setAttribute("data-onauth", "handleTelegramAuth");
         script.async = true;
-        document.getElementById("telegram-login-container").appendChild(script);
 
-        // Global login callback
-        window.handleTelegramAuth = (user) => {
-            console.log("Telegram user:", user);
-
-            fetch("https://whatsapp-reminder-backend.onrender.com/api/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(user)
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    if (data.ok) {
-                        localStorage.setItem("tg_id", data.telegram_id);
-                        window.location.href = `/dashboard?tg_id=${data.telegram_id}`;
-                    } else {
-                        alert("Login failed: " + (data.error || "unknown error"));
-                    }
-                })
-                .catch((err) => {
-                    console.error("Login error:", err);
-                    alert("Something went wrong. Check console.");
-                });
-        };
+        const container = document.getElementById("telegram-login-container");
+        if (container) container.appendChild(script);
     }, []);
 
     return (
