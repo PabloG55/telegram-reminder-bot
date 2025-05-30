@@ -51,25 +51,41 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 @app.route("/api/login", methods=["POST"])
 def telegram_login():
+    logger.info("🔐 Telegram login attempt received.")
     data = request.json
-    hash_to_check = data.pop("hash")
+    logger.info(f"📥 Payload: {data}")
+
+    hash_to_check = data.pop("hash", None)
     auth_date = int(data.get("auth_date", 0))
 
+    if not hash_to_check:
+        logger.warning("❌ Missing hash in login request.")
+        return jsonify({"error": "Missing hash"}), 400
+
+    # Reject old logins (older than 24h)
     if abs(time.time() - auth_date) > 86400:
+        logger.warning("❌ Login expired. auth_date: %s", auth_date)
         return jsonify({"error": "Login expired"}), 400
 
+    # Check hash
     data_check_string = "\n".join([f"{k}={v}" for k, v in sorted(data.items())])
     secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
     computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
 
+    logger.debug(f"🔒 Computed hash: {computed_hash}")
+    logger.debug(f"🔑 Provided hash: {hash_to_check}")
+
     if not hmac.compare_digest(computed_hash, hash_to_check):
+        logger.warning("❌ Hash mismatch - invalid login attempt.")
         return jsonify({"error": "Invalid login"}), 403
 
     telegram_id = data["id"]
+    logger.info(f"✅ Telegram login verified for user_id: {telegram_id}")
 
-    # Check if a user exists
+    # Check or create user
     user = User.query.filter_by(telegram_id=telegram_id).first()
     if not user:
+        logger.info("👤 New user detected. Creating user...")
         user = User(
             telegram_id=telegram_id,
             username=data.get("username"),
@@ -79,13 +95,14 @@ def telegram_login():
         )
         db.session.add(user)
     else:
-        # Update existing user data
+        logger.info("🔄 Existing user. Updating info if needed.")
         user.username = data.get("username")
         user.first_name = data.get("first_name")
         user.last_name = data.get("last_name")
         user.photo_url = data.get("photo_url")
 
     db.session.commit()
+    logger.info(f"✅ User login processed successfully: {telegram_id}")
 
     return jsonify({ "ok": True, "telegram_id": telegram_id })
 

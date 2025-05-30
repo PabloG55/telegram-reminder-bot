@@ -1,9 +1,10 @@
 import React, { useEffect } from "react";
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 // 🟢 ✅ 1. Define globally BEFORE component renders
 window.handleTelegramAuth = (user) => {
     console.log("✅ Telegram user:", user);
-    fetch("https://whatsapp-reminder-backend.onrender.com/api/login", {
+    fetch(`${BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(user)
