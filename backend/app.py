@@ -79,6 +79,7 @@ def telegram_login():
         )
         db.session.add(user)
     else:
+        # Update existing user data
         user.username = data.get("username")
         user.first_name = data.get("first_name")
         user.last_name = data.get("last_name")
@@ -106,7 +107,7 @@ def bot():
         if "voice" in message:
             file_id = message["voice"]["file_id"]
 
-            # Step 1: Get file path from Telegram
+            # Step 1: Get a file path from Telegram
             file_info = requests.get(f"{TELEGRAM_API_URL}/getFile?file_id={file_id}").json()
             file_path = file_info["result"]["file_path"]
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}"
