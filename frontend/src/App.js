@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import EditTask from './components/EditTask';
 import CalendarView from './components/CalendarView';
 import './index.css';
+import Login from "./components/Login";
 
 
 
@@ -14,6 +15,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/edit/:id" element={<EditTask />} />
         <Route path="/calendar" element={<CalendarView />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </Router>
   );

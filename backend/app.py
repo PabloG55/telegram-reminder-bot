@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import time
 from datetime import datetime, timedelta
 
 import logger
@@ -17,7 +20,7 @@ from requests.auth import HTTPBasicAuth
 from helpers.job_utils import remove_jobs_for_task, schedule_jobs_for_task
 from helpers.reminder_parser import process_text_command
 from helpers.transcriber import transcribe_audio
-from helpers.db import db, Task
+from helpers.db import db, Task, User
 import pytz
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
 # Configure logging only once
@@ -45,6 +48,46 @@ MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB
 ALLOWED_AUDIO_TYPES = {'audio/wav', 'audio/mp3', 'audio/ogg'}
 DOWNLOAD_TIMEOUT = 30  # seconds
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+
+@app.route("/api/login", methods=["POST"])
+def telegram_login():
+    data = request.json
+    hash_to_check = data.pop("hash")
+    auth_date = int(data.get("auth_date", 0))
+
+    if abs(time.time() - auth_date) > 86400:
+        return jsonify({"error": "Login expired"}), 400
+
+    data_check_string = "\n".join([f"{k}={v}" for k, v in sorted(data.items())])
+    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+    computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(computed_hash, hash_to_check):
+        return jsonify({"error": "Invalid login"}), 403
+
+    telegram_id = data["id"]
+
+    # Check if a user exists
+    user = User.query.filter_by(telegram_id=telegram_id).first()
+    if not user:
+        user = User(
+            telegram_id=telegram_id,
+            username=data.get("username"),
+            first_name=data.get("first_name"),
+            last_name=data.get("last_name"),
+            photo_url=data.get("photo_url")
+        )
+        db.session.add(user)
+    else:
+        user.username = data.get("username")
+        user.first_name = data.get("first_name")
+        user.last_name = data.get("last_name")
+        user.photo_url = data.get("photo_url")
+
+    db.session.commit()
+
+    return jsonify({ "ok": True, "telegram_id": telegram_id })
+
 
 @app.route("/bot", methods=["POST"])
 def bot():

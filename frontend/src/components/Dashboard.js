@@ -4,6 +4,10 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+const tg_id = new URLSearchParams(window.location.search).get("tg_id")
+    || localStorage.getItem("tg_id");
+
+
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [description, setDescription] = useState('');
@@ -12,13 +16,18 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchTasks();
+    if (!tg_id) {
+      window.location.href = "/login";
+    } else {
+      fetchTasks();
+    }
   }, []);
+
 
   const fetchTasks = async () => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${BASE_URL}/api/tasks`);
+      const res = await axios.get(`${BASE_URL}/api/tasks?user_id=${tg_id}`);
       setTasks(res.data);
     } catch (error) {
       console.error("Failed to fetch tasks:", error);
@@ -36,6 +45,7 @@ function Dashboard() {
 
     try {
       await axios.post(`${BASE_URL}/api/tasks/create`, {
+        user_id: tg_id,
         description,
         scheduled_time: fullDatetime
       });
@@ -152,10 +162,23 @@ function Dashboard() {
 
 
   return (
-      <div className="container max-w-4xl mx-auto py-8 px-4">
+
+      <div className="container max-w-4xl mx-auto py-8 px-4 relative">
+        {/* Logout Button */}
+        <button
+            onClick={() => {
+              localStorage.removeItem("tg_id");
+              window.location.href = "/login";
+            }}
+            className="absolute top-4 right-4 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+        >
+          Logout
+        </button>
+
         <div className="flex items-center justify-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">WappBot</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Botifier</h1>
         </div>
+
 
         <div className="bg-white rounded-lg shadow-md mb-8 overflow-hidden">
           <div className="p-5 border-b border-gray-200">

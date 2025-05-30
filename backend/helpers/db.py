@@ -5,9 +5,24 @@ from datetime import datetime
 db = SQLAlchemy()
 import pytz
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
+
+# User model
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    username = db.Column(db.String(100))
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    photo_url = db.Column(db.String(300))
+    joined_at = db.Column(db.DateTime, default=datetime.now(ECUADOR_TZ))
+
+    tasks = db.relationship('Task', backref='user', lazy=True)
+
+
 # Task model
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.BigInteger, db.ForeignKey('user.telegram_id'), nullable=False)
     description = db.Column(db.String(200), nullable=False)
     scheduled_time = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), default='pending')
@@ -19,3 +34,4 @@ class Task(db.Model):
 
     def __repr__(self):
         return f"<Task {self.id} - {self.description}>"
+
