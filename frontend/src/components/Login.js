@@ -5,7 +5,7 @@ function Login() {
         // Inject Telegram login widget
         const script = document.createElement("script");
         script.src = "https://telegram.org/js/telegram-widget.js?7";
-        script.setAttribute("data-telegram-login", "YOUR_BOT_USERNAME"); // No @
+        script.setAttribute("data-telegram-login", "botifier5_bot");
         script.setAttribute("data-size", "large");
         script.setAttribute("data-userpic", "false");
         script.setAttribute("data-request-access", "write");
