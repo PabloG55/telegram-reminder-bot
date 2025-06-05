@@ -32,7 +32,7 @@ app = Flask(__name__)
 reminders_bp = Blueprint('reminders', __name__)
 CORS(app, supports_credentials=True)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = EXTERNAL_DATABASE_URL
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
@@ -144,7 +144,7 @@ def bot():
                         logger.info(f"✅ Linked Telegram ID {chat_id} to user {user.email} (UID: {firebase_uid})")
                         reply = (
                             "✅ Telegram account successfully connected!\n\n"
-                            f"You can now return to the app:\nhttps://silly-adults-peel.loca.lt/welcome?tg_id={chat_id}"
+                            f"You can now return to the app:\nhttps://whatsapp-reminder-frontend.vercel.app/welcome?tg_id={chat_id}"
                         )
                     else:
                         reply = "❌ No user found for this code. Make sure you're logged in."
