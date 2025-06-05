@@ -2,16 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+import { auth } from "./firebase";
 
-const tg_id = (() => {
-  const idFromUrl = new URLSearchParams(window.location.search).get("tg_id");
-  if (idFromUrl) {
-    localStorage.setItem("tg_id", idFromUrl);  // Store it for next time
-    return idFromUrl;
-  }
-  return localStorage.getItem("tg_id");
-})();
+
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function EditTask() {
   const { id } = useParams();
@@ -20,12 +14,29 @@ function EditTask() {
   const [scheduledTime, setScheduledTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        setError("User not logged in");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchTask = async () => {
+      if (!userId) return;
+
       setIsLoading(true);
       try {
-        const res = await axios.get(`${BASE_URL}/api/tasks?user_id=${tg_id}`);
+        const res = await axios.get(`${BASE_URL}/api/tasks?user_id=${userId}`);
         const task = res.data.find(t => t.id === parseInt(id));
         if (task) {
           setDescription(task.description);
@@ -42,14 +53,15 @@ function EditTask() {
     };
 
     fetchTask();
-  }, [id]);
+  }, [id, userId]);
+
 
   const handleSubmit = async () => {
-    if (!description.trim()) return;
+    if (!description.trim() || !userId) return;
 
     try {
       await axios.put(`${BASE_URL}/api/tasks/${id}`, {
-        user_id: tg_id,
+        user_id: userId,
         description,
         scheduled_time: scheduledTime
       });
@@ -58,6 +70,7 @@ function EditTask() {
       console.error("Failed to update task:", error);
     }
   };
+
 
   if (isLoading) {
     return (

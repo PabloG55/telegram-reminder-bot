@@ -1,78 +1,34 @@
-import React, { useEffect } from "react";
-
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import { auth, googleProvider } from "./firebase";
 
 function Login() {
-    useEffect(() => {
-        const container = document.getElementById("telegram-login-container");
-        if (container) {
-            container.innerHTML = "";
+    const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+
+    const handleGoogleLogin = async () => {
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const user = result.user;
+            console.log("✅ Google user:", user.email);
+            navigate("/welcome");
+        } catch (err) {
+            alert("❌ " + err.message);
         }
+    };
 
-        // Define the callback function globally
-        window.handleTelegramAuth = (user) => {
-            console.log("✅ Telegram user:", user);
-
-            fetch(`${BASE_URL}/api/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(user),
-                credentials: 'include'
-            })
-                .then((res) => {
-                    console.log("Response status:", res.status);
-                    return res.json();
-                })
-                .then((data) => {
-                    console.log("🎯 Response from backend:", data);
-                    if (data.ok) {
-                        localStorage.setItem("tg_id", data.telegram_id);
-                        window.location.href = "/dashboard";
-                    } else {
-                        alert("Login failed: " + (data.error || "unknown error"));
-                    }
-                })
-                .catch((err) => {
-                    console.error("❌ Login error:", err);
-                    alert("Something went wrong. Check console for details.");
-                });
-        };
-
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-            const script = document.createElement("script");
-            script.src = "https://telegram.org/js/telegram-widget.js?22"; // Updated version
-            script.setAttribute("data-telegram-login", "botifier5_bot");
-            script.setAttribute("data-size", "large");
-            script.setAttribute("data-userpic", "false");
-            script.setAttribute("data-request-access", "write");
-            script.setAttribute("data-onauth", "handleTelegramAuth(user)"); // Fixed syntax
-            script.async = true;
-
-            // Error handling for script loading
-            script.onerror = () => {
-                console.error("Failed to load Telegram widget script");
-                alert("Failed to load Telegram login widget. Please check your internet connection.");
-            };
-
-            script.onload = () => {
-                console.log("Telegram widget script loaded successfully");
-            };
-
-            const container = document.getElementById("telegram-login-container");
-            if (container) {
-                container.appendChild(script);
-            } else {
-                console.error("telegram-login-container not found");
-            }
-        }, 100);
-
-        return () => {
-            if (window.handleTelegramAuth) {
-                delete window.handleTelegramAuth;
-            }
-        };
-    }, []);
+    const handleEmailLogin = async () => {
+        try {
+            const result = await signInWithEmailAndPassword(auth, email, password);
+            const user = result.user;
+            console.log("✅ Email user:", user.email);
+            navigate("/welcome");
+        } catch (err) {
+            alert("❌ " + err.message);
+        }
+    };
 
     return (
         <div className="h-screen bg-gray-100 flex flex-col justify-center items-center px-4">
@@ -81,14 +37,68 @@ function Login() {
                     Welcome to Botifier
                 </h1>
                 <p className="text-center text-gray-600 mb-4">
-                    Log in with Telegram to access your task dashboard.
+                    Log in with Email or Google to access your task dashboard.
                 </p>
 
-                <div id="telegram-login-container" className="flex justify-center min-h-[50px]">
-                    <div className="text-center text-gray-500">
-                        Loading Telegram login...
-                    </div>
+                {/* Email Input */}
+                <input
+                    type="email"
+                    placeholder="Email"
+                    className="w-full mb-3 p-2 border rounded"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
+
+                {/* Password Input */}
+                <input
+                    type="password"
+                    placeholder="Password"
+                    className="w-full mb-4 p-2 border rounded"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+
+                {/* Email Login Button */}
+                <div className="mt-6">
+                    <button
+                        onClick={handleEmailLogin}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded mb-4"
+                    >
+                        Log in with Email
+                    </button>
+                    <p className="text-sm text-center text-gray-600 mt-4">
+                        Don’t have an account?{" "}
+                        <a
+                            href="/register"
+                            className="text-blue-600 hover:underline font-medium"
+                        >
+                            Register here
+                        </a>
+                    </p>
                 </div>
+
+                <div className="mt-6">
+                    <div className="flex items-center my-6">
+                        <div className="flex-grow h-px bg-gray-300" />
+                        <span className="mx-3 text-gray-500 text-sm">or</span>
+                        <div className="flex-grow h-px bg-gray-300" />
+                    </div>
+
+                    <button
+                        onClick={handleGoogleLogin}
+                        className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-md py-2 hover:bg-gray-50 transition-colors"
+                    >
+                        <img
+                            src="https://www.svgrepo.com/show/475656/google-color.svg"
+                            alt="Google logo"
+                            className="h-5 w-5"
+                        />
+                        <span className="text-gray-700 font-medium">Continue with Google</span>
+                    </button>
+
+
+                </div>
+
             </div>
         </div>
     );

@@ -12,6 +12,13 @@ def send_reminder(task, followup=False):
 
     try:
         with app.app_context():
+            # Get the user's telegram_id
+            from helpers.db import User
+            user = User.query.get(task.user_id)
+            if not user or not user.telegram_id:
+                logger.error(f"❌ No telegram_id found for user {task.user_id}")
+                return
+
             if followup:
                 state.last_follow_up_task_ids[task.user_id] = task.id
                 logger.info(f"🔁 Set last_follow_up_task_ids[{task.user_id}] = {task.id} for '{task.description}'")
@@ -25,7 +32,7 @@ def send_reminder(task, followup=False):
         # Send message via Telegram
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {
-            "chat_id": task.user_id,
+            "chat_id": user.telegram_id,  # Use telegram_id, not user_id
             "text": message_body
         }
         response = requests.post(url, json=payload)
@@ -38,6 +45,3 @@ def send_reminder(task, followup=False):
     except Exception as e:
         logger.error(f"❌ Error sending Telegram reminder for task {task.id}: {str(e)}")
         raise
-
-def send_reminder_with_app(task, app):
-    logger.info(f"📤 Sending reminder for task: {task}")

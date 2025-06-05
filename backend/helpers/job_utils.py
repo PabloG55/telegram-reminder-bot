@@ -1,9 +1,11 @@
 from datetime import timedelta, datetime
 from helpers.scheduler import scheduler
-from helpers.reminder_sender import send_reminder_with_app
+from helpers.reminder_sender import send_reminder  # Import the existing function
 import logging
 from flask import current_app
 import pytz
+from helpers.db import Task
+
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
 
 logger = logging.getLogger(__name__)
@@ -16,23 +18,23 @@ def schedule_jobs_for_task(task):
     reminder_id = f"reminder_{task.id}_{int(utc_reminder_time.timestamp())}"
     followup_id = f"followup_{task.id}_{int(followup_time.timestamp())}"
 
-    app = current_app._get_current_object()
-
+    # Initial reminder job
     scheduler.add_job(
-        send_reminder_with_app,
+        send_reminder,
         trigger='date',
         run_date=utc_reminder_time,
-        args=[task.description, app],
+        args=[task, False],  # Pass task object and followup=False
         id=reminder_id,
         name=f"Reminder for: {task.description}",
         replace_existing=True
     )
 
+    # Follow-up job (1 hour later)
     scheduler.add_job(
-        send_reminder_with_app,
+        send_reminder,
         trigger='date',
         run_date=followup_time,
-        args=[f"✅ Did you finish: '{task.description}'? Reply YES or NO", app],
+        args=[task, True],  # Pass task object and followup=True
         id=followup_id,
         name=f"Follow-up for: {task.description}",
         replace_existing=True
@@ -51,13 +53,11 @@ def schedule_still_working_tasks(task):
     next_reminder_time = datetime.now(pytz.utc) + timedelta(hours=1)
     reminder_id = f"followup_{task.id}_{int(next_reminder_time.timestamp())}"
 
-    app = current_app._get_current_object()
-
     scheduler.add_job(
-        send_reminder_with_app,
+        send_reminder,
         trigger='date',
         run_date=next_reminder_time,
-        args=[f"🔁 Still working on: '{task.description}'? Reply YES or NO", app],
+        args=[task, True],  # Pass task object and followup=True
         id=reminder_id,
         name=f"Follow-up loop for: {task.description}",
         replace_existing=False

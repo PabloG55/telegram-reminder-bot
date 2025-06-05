@@ -1,40 +1,40 @@
-// Dashboard.jsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { auth } from "./firebase";
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+
 const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-const tg_id = (() => {
-  const idFromUrl = new URLSearchParams(window.location.search).get("tg_id");
-  if (idFromUrl) {
-    localStorage.setItem("tg_id", idFromUrl);  // Store it for next time
-    return idFromUrl;
-  }
-  return localStorage.getItem("tg_id");
-})();
-
-
 
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [description, setDescription] = useState('');
-  let [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [uid, setUid] = useState(null);  // <-- Track UID
 
   useEffect(() => {
-    if (!tg_id) {
-      window.location.href = "/login";
-    } else {
-      fetchTasks();
-    }
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUid(user.uid);
+      } else {
+        console.warn("❌ No user signed in.");
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (uid) {
+      fetchTasks(uid);
+    }
+  }, [uid]);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (userId) => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${BASE_URL}/api/tasks?user_id=${tg_id}`);
+      const res = await axios.get(`${BASE_URL}/api/tasks?user_id=${userId}`);
       setTasks(res.data);
     } catch (error) {
       console.error("Failed to fetch tasks:", error);
@@ -44,7 +44,7 @@ function Dashboard() {
   };
 
   const handleAdd = async () => {
-    if (!description.trim()) return;
+    if (!description.trim() || !uid) return;
 
     const finalDate = selectedDate || getDefaultEndTime();
     const finalTime = selectedTime || '23:59';
@@ -52,34 +52,26 @@ function Dashboard() {
 
     try {
       await axios.post(`${BASE_URL}/api/tasks/create`, {
-        user_id: tg_id,
+        user_id: uid,
         description,
         scheduled_time: fullDatetime
       });
       setDescription('');
       setSelectedDate('');
       setSelectedTime('');
-      fetchTasks();
+      fetchTasks(uid);
     } catch (error) {
       console.error("Failed to add task:", error);
     }
   };
 
-  const getDefaultEndTime = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   const handleComplete = async (id) => {
     try {
       await axios.post(`${BASE_URL}/api/tasks/${id}/complete`, {
-        user_id: tg_id
+        user_id: uid
       });
       const audio = new Audio('/done.mp3');
-      fetchTasks();
+      fetchTasks(uid);
       audio.play();
     } catch (error) {
       console.error("Failed to complete task:", error);
@@ -89,26 +81,33 @@ function Dashboard() {
   const handleReschedule = async (id) => {
     try {
       await axios.post(`${BASE_URL}/api/tasks/${id}/reschedule`, {
-        user_id: tg_id
+        user_id: uid
       });
       const audio = new Audio('/reschedule.mp3');
-      fetchTasks(); // refresh the task list
+      fetchTasks(uid);
       audio.play();
     } catch (error) {
       console.error("Failed to reschedule task:", error);
-      alert("❌ Rescheduling failed.");
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${BASE_URL}/api/tasks/${id}`, {
-        params: { user_id: tg_id }
+        params: { user_id: uid }
       });
-      fetchTasks();
+      fetchTasks(uid);
     } catch (error) {
       console.error("Failed to delete task:", error);
     }
+  };
+
+  const getDefaultEndTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getStatusColor = (status) => {
@@ -173,15 +172,16 @@ function Dashboard() {
     return Math.ceil((pastDays + firstDayOfYear.getDay() + 1) / 7);
   };
 
-
   return (
 
       <div className="container max-w-4xl mx-auto py-8 px-4 relative">
         {/* Logout Button */}
         <button
             onClick={() => {
-              localStorage.removeItem("tg_id");
-              window.location.href = "/login";
+              auth.signOut().then(() => {
+                localStorage.removeItem("tg_id");
+                window.location.href = "/login";
+              });
             }}
             className="absolute top-4 right-4 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
         >

@@ -32,7 +32,7 @@ app = Flask(__name__)
 reminders_bp = Blueprint('reminders', __name__)
 CORS(app, supports_credentials=True)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_DATABASE_URI"] = EXTERNAL_DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
@@ -51,62 +51,23 @@ ALLOWED_AUDIO_TYPES = {'audio/wav', 'audio/mp3', 'audio/ogg'}
 DOWNLOAD_TIMEOUT = 30  # seconds
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
-@app.route("/api/login", methods=["POST"])
-def telegram_login():
-    logger.info("🔐 Telegram login attempt received.")
-    data = request.json
-    logger.info(f"📥 Payload: {data}")
+@app.route("/api/firebase-login", methods=["POST"])
+def firebase_login():
+    data = request.get_json()
+    firebase_uid = data.get("uid")
+    email = data.get("email")
 
-    hash_to_check = data.pop("hash", None)
-    auth_date = int(data.get("auth_date", 0))
+    if not firebase_uid or not email:
+        return jsonify({"error": "Missing uid or email"}), 400
 
-    if not hash_to_check:
-        logger.warning("❌ Missing hash in login request.")
-        return jsonify({"error": "Missing hash"}), 400
-
-    # Reject old logins (older than 24h)
-    if abs(time.time() - auth_date) > 86400:
-        logger.warning("❌ Login expired. auth_date: %s", auth_date)
-        return jsonify({"error": "Login expired"}), 400
-
-    # Check hash
-    data_check_string = "\n".join([f"{k}={v}" for k, v in sorted(data.items())])
-    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
-    computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-
-    logger.debug(f"🔒 Computed hash: {computed_hash}")
-    logger.debug(f"🔑 Provided hash: {hash_to_check}")
-
-    if not hmac.compare_digest(computed_hash, hash_to_check):
-        logger.warning("❌ Hash mismatch - invalid login attempt.")
-        return jsonify({"error": "Invalid login"}), 403
-
-    telegram_id = data["id"]
-    logger.info(f"✅ Telegram login verified for user_id: {telegram_id}")
-
-    # Check or create user
-    user = User.query.filter_by(telegram_id=telegram_id).first()
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
     if not user:
-        logger.info("👤 New user detected. Creating user...")
-        user = User(
-            telegram_id=telegram_id,
-            username=data.get("username"),
-            first_name=data.get("first_name"),
-            last_name=data.get("last_name"),
-            photo_url=data.get("photo_url")
-        )
+        user = User(firebase_uid=firebase_uid, email=email)
         db.session.add(user)
-    else:
-        logger.info("🔄 Existing user. Updating info if needed.")
-        user.username = data.get("username")
-        user.first_name = data.get("first_name")
-        user.last_name = data.get("last_name")
-        user.photo_url = data.get("photo_url")
+        db.session.commit()
 
-    db.session.commit()
-    logger.info(f"✅ User login processed successfully: {telegram_id}")
+    return jsonify({ "ok": True })
 
-    return jsonify({ "ok": True, "telegram_id": telegram_id })
 
 
 @app.route("/bot", methods=["POST"])
@@ -117,6 +78,7 @@ def bot():
 
     try:
         message = data.get("message", {})
+        text = message.get("text", "").strip()
         chat_id = message.get("chat", {}).get("id")
 
         if not chat_id:
@@ -157,8 +119,45 @@ def bot():
                         os.remove(filename)
 
         else:
-            # Handle text messages
+
             text = message.get("text", "").strip()
+            logger.info(f"📨 Text received: '{text}'")
+
+            # Handle start
+            if text == "/start":
+                reply = "Please paste the /connect unique_code"
+                requests.post(f"{TELEGRAM_API_URL}/sendMessage", json={
+                    "chat_id": chat_id,
+                    "text": reply
+                })
+                return jsonify({"ok": True})
+
+            # Handle connect
+            if text.lower().startswith("/connect"):
+                parts = text.split(" ", 1)
+                if len(parts) == 2:
+                    firebase_uid = parts[1].strip()
+                    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+                    if user:
+                        user.telegram_id = int(chat_id)
+                        db.session.commit()
+                        logger.info(f"✅ Linked Telegram ID {chat_id} to user {user.email} (UID: {firebase_uid})")
+                        reply = (
+                            "✅ Telegram account successfully connected!\n\n"
+                            f"You can now return to the app:\nhttps://silly-adults-peel.loca.lt/welcome?tg_id={chat_id}"
+                        )
+                    else:
+                        reply = "❌ No user found for this code. Make sure you're logged in."
+                else:
+                    reply = "❌ Invalid connect code format. Try again."
+
+                requests.post(f"{TELEGRAM_API_URL}/sendMessage", json={
+                    "chat_id": chat_id,
+                    "text": reply
+                })
+                return jsonify({"ok": True})
+
+            # Handle text messages
             result = process_text_command(text, telegram_id=chat_id)
             reply = result or f"❌ I couldn't understand: \"{text}\""
 
@@ -226,7 +225,17 @@ app.register_blueprint(reminders_bp)
 
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
-    tasks = Task.query.order_by(Task.scheduled_time.asc()).all()
+    firebase_uid = request.args.get("user_id")  # this is uid from frontend
+
+    if not firebase_uid:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user:
+        return jsonify([])
+
+    tasks = Task.query.filter_by(user_id=user.id).order_by(Task.scheduled_time.asc()).all()
+
     return jsonify([{
         "id": task.id,
         "description": task.description,
@@ -234,24 +243,25 @@ def get_tasks():
         "status": task.status
     } for task in tasks])
 
+
 @app.route("/api/tasks/create", methods=["POST"])
 def api_create_task():
     data = request.get_json()
     description = data.get("description")
     scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
 
-    telegram_id = data.get("user_id")
-    if not telegram_id:
-        return jsonify({"error": "Missing user_id"}), 400
+    firebase_uid = data.get("user_id")
+    if not firebase_uid:
+        return jsonify({"error": "Missing user_id (firebase_uid)"}), 400
 
-    user = User.query.filter_by(telegram_id=telegram_id).first()
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
 
     new_task = Task(
         description=description,
         scheduled_time=scheduled_time,
-        user_id=user.telegram_id
+        user_id=user.id  # ✅ Use the primary key of the user
     )
 
     db.session.add(new_task)
@@ -262,10 +272,11 @@ def api_create_task():
 
 @app.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
 def api_complete_task(task_id):
-    telegram_id = request.json.get("user_id")
+    firebase_uid = request.json.get("user_id")
     task = Task.query.get_or_404(task_id)
 
-    if str(task.user_id) != str(telegram_id):
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
     remove_jobs_for_task(task.id)
@@ -273,12 +284,14 @@ def api_complete_task(task_id):
     db.session.commit()
     return jsonify({"message": f"Task {task.id} marked as done."})
 
+
 @app.route("/api/tasks/<int:task_id>/reschedule", methods=["POST"])
 def api_reschedule_task(task_id):
-    telegram_id = request.json.get("user_id")
+    firebase_uid = request.json.get("user_id")
     task = Task.query.get_or_404(task_id)
 
-    if str(task.user_id) != str(telegram_id):
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
     if task.status == "done":
@@ -296,10 +309,11 @@ def api_reschedule_task(task_id):
 
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 def api_delete_task(task_id):
-    telegram_id = request.args.get("user_id")
+    firebase_uid = request.args.get("user_id")
     task = Task.query.get_or_404(task_id)
 
-    if str(task.user_id) != str(telegram_id):
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
     remove_jobs_for_task(task.id)
@@ -308,13 +322,15 @@ def api_delete_task(task_id):
     return jsonify({"message": f"Task {task.id} deleted."})
 
 
+
 @app.route("/api/tasks/<int:task_id>", methods=["PUT"])
 def api_edit_task(task_id):
     data = request.get_json()
-    telegram_id = data.get("user_id")
+    firebase_uid = data.get("user_id")
     task = Task.query.get_or_404(task_id)
 
-    if str(task.user_id) != str(telegram_id):
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
     task.description = data.get("description", task.description)
@@ -342,5 +358,6 @@ def jobs():
 
 if __name__ == "__main__":
     with app.app_context():
+        db.drop_all()
         db.create_all()
     app.run(port=5000, debug=False)
