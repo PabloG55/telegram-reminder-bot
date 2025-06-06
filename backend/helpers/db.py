@@ -25,7 +25,7 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'), nullable=False)
     description = db.Column(db.String(200), nullable=False)
-    scheduled_time = db.Column(db.DateTime, nullable=False)
+    scheduled_time = db.Column(db.DateTime(timezone=True), nullable=False)
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.now(ECUADOR_TZ))
     reminder_sent = db.Column(db.Boolean, default=False)

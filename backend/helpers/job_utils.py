@@ -12,18 +12,18 @@ logger = logging.getLogger(__name__)
 
 def schedule_jobs_for_task(task):
     """Schedules reminder and follow-up jobs for a given task."""
-    reminder_time = task.reminder_time
-    followup_time = reminder_time + timedelta(hours=1)
-    logger.info(f"utc_reminder_time: {reminder_time}, followup_time: {followup_time}")
+    utc_reminder_time = task.scheduled_time.astimezone(ECUADOR_TZ)
+    followup_time = utc_reminder_time + timedelta(hours=1)
+    logger.info(f"utc_reminder_time: {utc_reminder_time}, followup_time: {followup_time}")
 
-    reminder_id = f"reminder_{task.id}_{int(reminder_time.timestamp())}"
+    reminder_id = f"reminder_{task.id}_{int(utc_reminder_time.timestamp())}"
     followup_id = f"followup_{task.id}_{int(followup_time.timestamp())}"
 
     # Initial reminder job
     scheduler.add_job(
         send_reminder,
         trigger='date',
-        run_date=reminder_time,
+        run_date=utc_reminder_time,
         args=[task, False],  # Pass task object and followup=False
         id=reminder_id,
         name=f"Reminder for: {task.description}",
