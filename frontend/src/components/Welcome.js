@@ -93,9 +93,6 @@ function Welcome() {
                     <p className="text-green-600">
                         ✅ Command <code className="bg-gray-200 px-2 py-1 rounded">{`/connect ${user.uid}`}</code> copied! Paste it in Telegram.
                     </p>
-                    <p className="text-gray-600 mt-2">
-                        🕐 This page will close in <strong>5 seconds</strong>.
-                    </p>
                 </div>
             )}
 
