@@ -46,7 +46,6 @@ def try_schedule_reminder(text, user):
                 "PREFER_DATES_FROM": "future",
                 "RELATIVE_BASE": datetime.now(ECUADOR_TZ),
                 "TIMEZONE": "America/Guayaquil",
-                "RETURN_AS_TIMEZONE_AWARE": True,
             },
         )
 
