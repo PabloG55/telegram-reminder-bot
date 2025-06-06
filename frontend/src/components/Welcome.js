@@ -8,6 +8,7 @@ function Welcome() {
     const [connectCopied, setConnectCopied] = useState(false);
 
     const tg_id = new URLSearchParams(window.location.search).get("tg_id") || localStorage.getItem("tg_id");
+    localStorage.setItem("close_login", "true"); // this triggers the event in /login
 
     useEffect(() => {
         const unsub = auth.onAuthStateChanged(async (u) => {

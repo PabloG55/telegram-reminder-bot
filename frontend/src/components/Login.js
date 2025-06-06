@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
@@ -11,6 +11,16 @@ function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    useEffect(() => {
+        const handleStorage = (e) => {
+            if (e.key === "close_login" && e.newValue === "true") {
+                window.close();
+            }
+        };
+        window.addEventListener("storage", handleStorage);
+        return () => window.removeEventListener("storage", handleStorage);
+    }, []);
+
     const handleLogin = async (user) => {
         try {
             const res = await axios.get(`${BASE_URL}/api/user-status?uid=${user.uid}`);
@@ -20,10 +30,12 @@ function Login() {
                 navigate("/dashboard"); // ✅ skip Telegram connect
             } else {
                 window.open("/welcome"); // ask them to connect Telegram
+                window.close();
             }
         } catch (err) {
             console.error("❌ Failed to fetch Telegram status:", err);
             window.open("/welcome"); // fallback
+            window.close();
         }
     };
 
