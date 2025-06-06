@@ -72,6 +72,7 @@ def try_schedule_reminder(text, user):
             db.session.add(new_task)
             logger.info(f"New task: {new_task}")
             db.session.commit()
+            logger.info(f"New task: {new_task}")
 
             schedule_jobs_for_task(new_task)
 
