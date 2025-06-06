@@ -170,9 +170,19 @@ def process_text_command(text, telegram_id):
             if not task:
                 return f"❌ No task found matching '{task_desc}'."
 
-            new_time = dateparser.parse(time_str)
+            new_time = dateparser.parse(time_str, settings={"PREFER_DATES_FROM": "future"})
+
             if not new_time:
                 return f"❌ Could not parse the time '{time_str}'. Try something like 'Edit laundry at 9:00pm'."
+
+            # Localize to Ecuador if needed
+            from pytz import timezone
+            ECUADOR_TZ = timezone("America/Guayaquil")
+
+            if new_time.tzinfo is None:
+                new_time = ECUADOR_TZ.localize(new_time)
+            else:
+                new_time = new_time.astimezone(ECUADOR_TZ)
 
             remove_jobs_for_task(task.id)
 

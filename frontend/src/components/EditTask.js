@@ -58,12 +58,13 @@ function EditTask() {
 
   const handleSubmit = async () => {
     if (!description.trim() || !userId) return;
+    const utcDatetime = new Date(scheduledTime).toISOString();
 
     try {
       await axios.put(`${BASE_URL}/api/tasks/${id}`, {
         user_id: userId,
         description,
-        scheduled_time: scheduledTime
+        scheduled_time: utcDatetime
       });
       navigate('/');
     } catch (error) {

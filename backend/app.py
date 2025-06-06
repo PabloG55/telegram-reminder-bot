@@ -338,7 +338,14 @@ def api_edit_task(task_id):
         return jsonify({"error": "Unauthorized access"}), 403
 
     task.description = data.get("description", task.description)
-    task.scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
+    parsed_time = isoparse(data.get("scheduled_time"))
+
+    if parsed_time.tzinfo is None:
+        parsed_time = ECUADOR_TZ.localize(parsed_time)
+    else:
+        parsed_time = parsed_time.astimezone(ECUADOR_TZ)
+
+    task.scheduled_time = parsed_time
 
     if task.status == "done":
         task.status = "pending"
