@@ -35,6 +35,7 @@ function Login() {
                 } else {
                     popup.focus();
                 }
+                window.close();
             }
         } catch (err) {
             console.error("❌ Failed to fetch Telegram status:", err);
@@ -44,6 +45,7 @@ function Login() {
             } else {
                 popup.focus();
             }
+            window.close();
         }
     };
 
