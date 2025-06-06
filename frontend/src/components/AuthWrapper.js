@@ -23,10 +23,13 @@ function AuthWrapper() {
                     } else {
                         // 🔒 not connected to Telegram → redirect to /welcome
                         navigate("/welcome");
+                        setLoading(false);
                     }
                 } catch (err) {
                     console.error("❌ Failed to verify Telegram connection:", err);
                     navigate("/welcome");
+                    setLoading(false);
+
                 }
             }
         });
