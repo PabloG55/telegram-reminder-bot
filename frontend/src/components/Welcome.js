@@ -80,7 +80,7 @@ function Welcome() {
                         ✅ Command <code className="bg-gray-200 px-2 py-1 rounded">{`/connect ${user.uid}`}</code> copied! Paste it in Telegram.
                     </p>
                     <p className="text-gray-600 mt-2">
-                        🕐 This page will automatically close in <strong>5 seconds</strong>.
+                        🕐 This page will automatically close and open Telegram in <strong>5 seconds</strong>.
                     </p>
                 </div>
             )}

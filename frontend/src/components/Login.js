@@ -29,13 +29,23 @@ function Login() {
             if (telegram_connected) {
                 navigate("/dashboard"); // ✅ skip Telegram connect
             } else {
-                window.open("/welcome"); // ask them to connect Telegram
-                window.close();
+                const popup = window.open("/welcome"); // ask them to connect Telegram
+                if (!popup) {
+                    alert("❌ Pop-up blocked! Please allow pop-ups for this site to continue.");
+                } else {
+                    popup.focus();
+                    window.close();
+                }
             }
         } catch (err) {
             console.error("❌ Failed to fetch Telegram status:", err);
-            window.open("/welcome"); // fallback
-            window.close();
+            const popup = window.open("/welcome"); // ask them to connect Telegram
+            if (!popup) {
+                alert("❌ Pop-up blocked! Please allow pop-ups for this site to continue.");
+            } else {
+                popup.focus();
+                window.close();
+            }
         }
     };
 
