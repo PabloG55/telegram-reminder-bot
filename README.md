@@ -1,41 +1,54 @@
-# WappBott – WhatsApp Reminder Assistant
+# **Botifier – Telegram Reminder Assistant**
 
 ![](images/wappbot.jpg)
 
 ## Overview
 
-WappBott is more than a simple to-do list, it's your personal productivity assistant powered by WhatsApp and enhanced with natural language processing (NLP). Designed for users who want natural, intuitive interaction with their daily tasks, WappBott understands your messages just like a human assistant would. You can add, edit, delete, and complete reminders using everyday language, all from your WhatsApp chat.
+**Botifier** is more than a simple to-do list, it's your personal productivity assistant powered by **Telegram** and enhanced with **natural language processing (NLP)**. Designed for users who want natural, intuitive interaction with their daily tasks, Botifier understands your messages just like a human assistant would.
 
-It also sends smart follow-up messages to check if you’ve completed your tasks and offers a live dashboard to visualize and manage everything in one place.
+You can add, edit, delete, and complete reminders using everyday language, all from a private chat with the bot on Telegram. It also sends smart follow-up messages to check if you’ve completed your tasks and offers a live web dashboard to visualize and manage everything in one place.
 
-Whether you're a busy student, a professional juggling multiple priorities, or someone who just forgets to take out the trash, WappBott helps you stay accountable and in control.
+Whether you're a student, a busy professional, or someone who just forgets to take out the trash, Botifier helps you stay accountable and in control.
 
 ---
 
 ## Features
 
-* **WhatsApp-Based Task Management**: Add and manage tasks via simple messages.
-* **Follow-Up Reminders**: Get personalized nudges asking if you’ve completed your task.
-* **Web Dashboard**: See all your tasks in a clean, real-time dashboard.
-* **Natural Language Interaction**: Say things like *“Remind me to study at 6pm”* and WappBott understands.
-* **Edit/Delete by Description**: No need for task IDs, just say what you want to change.
-* **Persistent Storage**: Tasks are stored and visible throughout the day.
+* **Telegram-Based Task Management**: Manage your tasks via chat or voice in Telegram.
+* **Smart Follow-Up Reminders**: Botifier checks in to keep you on track.
+* **Web Dashboard**: A real-time dashboard to view, edit, and track your tasks.
+* **Natural Language Understanding**: Say things like *“Remind me to call mom at 7pm”* and it just works.
+* **Edit/Delete by Description**: Modify tasks by simply referencing their name.
+* **Per-User Timezone Handling**: Each user gets reminders in their own local time.
+* **Voice Support**: Send voice notes, Botifier transcribes and understands them.
 
 ---
 
 ## Target Users
 
-* Students who want to manage study sessions, deadlines, and personal errands.
-* Professionals who rely on WhatsApp but don’t want to juggle multiple apps.
-* Anyone looking for a smart assistant that does more than just create a list.
+* Students managing study sessions, assignments, and daily routines.
+* Professionals who want seamless task management without leaving Telegram.
+* Anyone looking for an intelligent assistant with a human-like interface.
 
 ---
 
 ## How to Use
 
-### 1. **Add a Task via WhatsApp**
+### 1. **Connect Telegram to Your Account**
 
-Send a message or a voice message like:
+After logging into the Botifier dashboard, type:
+
+```
+/connect YOUR_CODE
+```
+
+This links your Telegram ID with your secure user profile.
+
+---
+
+### 2. **Add a Task via Telegram Chat or Voice**
+
+Send a message or a voice note like:
 
 ```
 Remind me to finish my resume at 7pm
@@ -43,9 +56,11 @@ Remind me to finish my resume at 7pm
 
 ![](images/phone1.jpg)
 
-### 2. **Get Follow-Up Nudges**
+---
 
-WappBott will follow up with a message like:
+### 3. **Get Follow-Up Nudges**
+
+Botifier automatically checks in:
 
 ```
 🔁 Still working on: 'finish my resume'? Reply YES or NO
@@ -53,22 +68,36 @@ WappBott will follow up with a message like:
 
 ![](images/phone2.jpg)
 
-### 3. **Use the Web Dashboard**
+---
 
-* View all your tasks categorized by status.
-* Mark tasks as done, delete them, or edit descriptions and times.
+### 4. **Use the Web Dashboard**
+
+* View tasks across all devices.
+* Filter by status.
+* Edit or complete tasks visually.
 
 ![](images/web.jpg)
 
-### 4. **Re-schedule or Remove Tasks**
+---
 
-* Just say: `Edit "finish my resume" to "9pm"`
-* Or: `Delete "finish my resume at 9pm"`
+### 5. **Reschedule or Delete Tasks Naturally**
+
+* Say: `Edit "finish my resume" to 9pm`
+* Or: `Delete "finish my resume"`
 
 ![](images/phone3.jpg)
 
 ---
 
-## Not Just a To-Do List
+## Key Benefits for Multi-User Environments
 
-WappBott is built around **accountability**, **natural interaction**, and **cross-platform convenience**. Unlike a basic checklist app, WappBott engages with you like a real assistant would, reminding, asking, confirming, and adapting.
+* 🔒 **Secure Identity Linking** via Firebase Auth + Telegram `/connect` flow.
+* 🌍 **Timezone Awareness** Reminders are personalized to your location.
+* 🔁 **User-Specific Jobs** Each user's tasks are scheduled and tracked independently.
+* 💬 **One Unified Assistant** Interact via Telegram; manage via web.
+
+---
+
+## Final Thoughts
+
+**Botifier** isn’t just a bot, it’s an assistant that listens, reminds, and keeps you accountable. With its human-like understanding and multi-user architecture, Botifier delivers the perfect blend of productivity and personalization.

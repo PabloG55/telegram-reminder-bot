@@ -41,7 +41,9 @@ def try_schedule_reminder(text, user):
             time_str = "11:59 pm"
 
         parsed_time = dateparser.parse(time_str,
-                                       settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now(ECUADOR_TZ)})
+                                       settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now()})
+        logger.info("parsed_time", parsed_time)
+
 
         if not parsed_time:
             return "❌ Sorry, I couldn't understand the time you provided."
@@ -49,9 +51,10 @@ def try_schedule_reminder(text, user):
             # Localize the parsed time if not already
         if parsed_time.tzinfo is None:
             remind_time = ECUADOR_TZ.localize(parsed_time)
+            logger.info("remind_time", remind_time)
         else:
             remind_time = parsed_time.astimezone(ECUADOR_TZ)
-
+            logger.info("remind_time", remind_time)
             # Safely compare
         now = datetime.now(ECUADOR_TZ)
         if remind_time < now:
