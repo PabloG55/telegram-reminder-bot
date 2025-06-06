@@ -34,7 +34,6 @@ function Login() {
                     alert("❌ Pop-up blocked! Please allow pop-ups for this site to continue.");
                 } else {
                     popup.focus();
-                    window.close();
                 }
             }
         } catch (err) {
@@ -44,7 +43,6 @@ function Login() {
                 alert("❌ Pop-up blocked! Please allow pop-ups for this site to continue.");
             } else {
                 popup.focus();
-                window.close();
             }
         }
     };
