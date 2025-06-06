@@ -84,6 +84,7 @@ def try_schedule_reminder(text, user):
 
 
 def process_text_command(text, telegram_id):
+    ECUADOR_TZ = pytz.timezone("America/Guayaquil")
     telegram_id = int(telegram_id)
     user = User.query.filter_by(telegram_id=telegram_id).first()
     if not user:
@@ -170,7 +171,7 @@ def process_text_command(text, telegram_id):
             if not task:
                 return f"❌ No task found matching '{task_desc}'."
 
-            new_time = dateparser.parse(time_str, settings={"PREFER_DATES_FROM": "future"})
+            new_time = dateparser.parse(time_str)
 
             if not new_time:
                 return f"❌ Could not parse the time '{time_str}'. Try something like 'Edit laundry at 9:00pm'."
