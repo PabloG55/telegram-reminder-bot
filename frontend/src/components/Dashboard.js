@@ -48,7 +48,8 @@ function Dashboard() {
 
     const finalDate = selectedDate || getDefaultEndTime();
     const finalTime = selectedTime || '23:59';
-    const fullDatetime = `${finalDate}T${finalTime}`;
+    const localDate = new Date(`${finalDate}T${finalTime}`);
+    const fullDatetime = localDate.toISOString();
 
     try {
       await axios.post(`${BASE_URL}/api/tasks/create`, {

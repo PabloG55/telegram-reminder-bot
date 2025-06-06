@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timedelta
 
 import logger
+from dateutil.parser import isoparse
 from flask_cors import CORS
 
 from helpers.reminder_sender import send_reminder
@@ -248,7 +249,10 @@ def get_tasks():
 def api_create_task():
     data = request.get_json()
     description = data.get("description")
-    scheduled_time = datetime.fromisoformat(data.get("scheduled_time"))
+    scheduled_time = isoparse(data.get("scheduled_time"))
+
+    # Convert from UTC to Ecuador time
+    scheduled_time = scheduled_time.astimezone(ECUADOR_TZ)
 
     firebase_uid = data.get("user_id")
     if not firebase_uid:
