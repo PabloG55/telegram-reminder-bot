@@ -40,14 +40,8 @@ def try_schedule_reminder(text, user):
             task_desc = rest
             time_str = "11:59 pm"
 
-        parsed_time = dateparser.parse(
-            time_str,
-            settings={
-                "PREFER_DATES_FROM": "future",
-                "RELATIVE_BASE": datetime.now(ECUADOR_TZ),
-                "TIMEZONE": "America/Guayaquil",
-            },
-        )
+        parsed_time = dateparser.parse(time_str,
+                                       settings={"PREFER_DATES_FROM": "future", "RELATIVE_BASE": datetime.now(ECUADOR_TZ)})
 
         if not parsed_time:
             return "❌ Sorry, I couldn't understand the time you provided."
@@ -170,15 +164,7 @@ def process_text_command(text, telegram_id):
             if not task:
                 return f"❌ No task found matching '{task_desc}'."
 
-            new_time = dateparser.parse(
-                time_str,
-                settings={
-                    "TIMEZONE": "America/Guayaquil",
-                    "RETURN_AS_TIMEZONE_AWARE": True,
-                    "PREFER_DATES_FROM": "future",
-                    "RELATIVE_BASE": datetime.now(ECUADOR_TZ),
-                },
-            )
+            new_time = dateparser.parse(time_str)
             if not new_time:
                 return f"❌ Could not parse the time '{time_str}'. Try something like 'Edit laundry at 9:00pm'."
 
