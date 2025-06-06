@@ -128,7 +128,8 @@ def process_text_command(text, telegram_id):
 
         response = "📝 Your tasks:\n"
         for task in tasks:
-            time = task.scheduled_time.strftime("%b %d at %I:%M %p")
+            local_time = task.scheduled_time.astimezone(ECUADOR_TZ)
+            time = local_time.strftime("%b %d at %I:%M %p")
             response += f"• {task.description} — {task.status} at {time}\n"
         return response.strip()
 

@@ -1,8 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP
-
 # Create the shared SQLAlchemy object (not bound to app yet)
 db = SQLAlchemy()
 import pytz
@@ -27,13 +25,13 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'), nullable=False)
     description = db.Column(db.String(200), nullable=False)
-    scheduled_time = db.Column(TIMESTAMP(timezone=True), nullable=False)
+    scheduled_time = db.Column(db.DateTime(timezone=True), nullable=False)
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.now(ECUADOR_TZ))
     reminder_sent = db.Column(db.Boolean, default=False)
     followup_sent = db.Column(db.Boolean, default=False)
     current_reminder_type = db.Column(db.String(50), default='initial')
-    reminder_sent_at = db.Column(TIMESTAMP(timezone=True))  # Changed to timezone-aware
+    reminder_sent_at = db.Column(db.DateTime(timezone=True))
 
     def __repr__(self):
         return f"<Task {self.id} - {self.description} - {self.scheduled_time} - {self.status}>"

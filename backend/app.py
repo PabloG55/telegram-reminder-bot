@@ -239,7 +239,7 @@ def get_tasks():
     return jsonify([{
         "id": task.id,
         "description": task.description,
-        "scheduled_time": task.scheduled_time.isoformat(),
+        "scheduled_time": task.scheduled_time.astimezone(ECUADOR_TZ).isoformat(),
         "status": task.status
     } for task in tasks])
 
