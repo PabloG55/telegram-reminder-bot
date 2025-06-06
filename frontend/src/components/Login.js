@@ -23,7 +23,7 @@ function Login() {
             }
         } catch (err) {
             console.error("❌ Failed to fetch Telegram status:", err);
-            navigate("/login"); // fallback
+            window.open("/welcome"); // fallback
         }
     };
 
