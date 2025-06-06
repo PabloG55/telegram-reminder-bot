@@ -52,10 +52,10 @@ function Welcome() {
         setConnectCopied(true);
 
         // Open Telegram in a new tab
-        window.open("https://web.telegram.org/k/#@botifier5_bot");
 
         // Wait 10 seconds, then close the current (Botifier Welcome) tab
         setTimeout(() => {
+            window.open("https://web.telegram.org/k/#@botifier5_bot");
             window.close();
         }, 5000); // 10 seconds
     };
@@ -74,9 +74,14 @@ function Welcome() {
             </button>
 
             {connectCopied && (
-                <p className="mt-4 text-green-600 text-sm">
-                    ✅ Command <code className="bg-gray-200 px-2 py-1 rounded">{`/connect ${user.uid}`}</code> copied! Paste it in Telegram.
-                </p>
+                <div className="mt-4 text-sm">
+                    <p className="text-green-600">
+                        ✅ Command <code className="bg-gray-200 px-2 py-1 rounded">{`/connect ${user.uid}`}</code> copied! Paste it in Telegram.
+                    </p>
+                    <p className="text-gray-600 mt-2">
+                        🕐 This page will automatically close in <strong>5 seconds</strong>.
+                    </p>
+                </div>
             )}
         </div>
     );

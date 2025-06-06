@@ -2,18 +2,37 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
+import axios from "axios";
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 
 function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    const handleLogin = async (user) => {
+        try {
+            const res = await axios.get(`${BASE_URL}/api/user-status?uid=${user.uid}`);
+            const { telegram_connected } = res.data;
+
+            if (telegram_connected) {
+                navigate("/dashboard"); // ✅ skip Telegram connect
+            } else {
+                window.open("/welcome"); // ask them to connect Telegram
+            }
+        } catch (err) {
+            console.error("❌ Failed to fetch Telegram status:", err);
+            navigate("/login"); // fallback
+        }
+    };
+
     const handleGoogleLogin = async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             const user = result.user;
             console.log("✅ Google user:", user.email);
-            navigate("/welcome");
+            await handleLogin(user);
         } catch (err) {
             alert("❌ " + err.message);
         }
@@ -24,11 +43,12 @@ function Login() {
             const result = await signInWithEmailAndPassword(auth, email, password);
             const user = result.user;
             console.log("✅ Email user:", user.email);
-            navigate("/welcome");
+            await handleLogin(user);
         } catch (err) {
             alert("❌ " + err.message);
         }
     };
+
 
     return (
         <div className="h-screen bg-gray-100 flex flex-col justify-center items-center px-4">

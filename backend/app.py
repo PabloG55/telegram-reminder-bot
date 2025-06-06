@@ -69,7 +69,20 @@ def firebase_login():
 
     return jsonify({ "ok": True })
 
+@app.route("/api/user-status", methods=["GET"])
+def get_user_status():
+    firebase_uid = request.args.get("uid")
+    if not firebase_uid:
+        return jsonify({"error": "Missing uid"}), 400
 
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({
+        "telegram_connected": user.telegram_id is not None,
+        "email": user.email
+    })
 
 @app.route("/bot", methods=["POST"])
 def bot():
