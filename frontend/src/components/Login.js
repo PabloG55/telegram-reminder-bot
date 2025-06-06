@@ -29,23 +29,43 @@ function Login() {
             if (telegram_connected) {
                 navigate("/dashboard"); // ✅ skip Telegram connect
             } else {
-                const popup = window.open("/welcome"); // ask them to connect Telegram
+                const popup = window.open("/welcome");
+
                 if (!popup) {
-                    alert("❌ Pop-up blocked! Please allow pop-ups for this site to continue.");
+                    // ❌ Popup blocked — fallback
+                    const fallback = window.confirm("❌ Pop-up blocked. Open the welcome page in this tab instead?");
+                    if (fallback) {
+                        window.location.href = `/welcome`;
+                    }
                 } else {
+                    // ✅ Popup opened successfully — optionally close current tab
                     popup.focus();
+
+                    // Wait 5 seconds, then try closing the login tab
+                    setTimeout(() => {
+                        window.close();
+                    }, 5000);
                 }
-                window.close();
             }
         } catch (err) {
             console.error("❌ Failed to fetch Telegram status:", err);
-            const popup = window.open("/welcome"); // ask them to connect Telegram
+            const popup = window.open("/welcome");
+
             if (!popup) {
-                alert("❌ Pop-up blocked! Please allow pop-ups for this site to continue.");
+                // ❌ Popup blocked — fallback
+                const fallback = window.confirm("❌ Pop-up blocked. Open the welcome page in this tab instead?");
+                if (fallback) {
+                    window.location.href = `/welcome`;
+                }
             } else {
+                // ✅ Popup opened successfully — optionally close current tab
                 popup.focus();
+
+                // Wait 5 seconds, then try closing the login tab
+                setTimeout(() => {
+                    window.close();
+                }, 5000);
             }
-            window.close();
         }
     };
 
