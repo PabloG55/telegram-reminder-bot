@@ -26,7 +26,7 @@ function AuthWrapper() {
                     }
                 } catch (err) {
                     console.error("❌ Failed to verify Telegram connection:", err);
-                    navigate("/login");
+                    navigate("/welcome");
                 }
             }
         });

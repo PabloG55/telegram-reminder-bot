@@ -40,11 +40,7 @@ function Login() {
                 } else {
                     // ✅ Popup opened successfully — optionally close current tab
                     popup.focus();
-
-                    // Wait 5 seconds, then try closing the login tab
-                    setTimeout(() => {
-                        window.close();
-                    }, 5000);
+                    window.close();
                 }
             }
         } catch (err) {
@@ -60,11 +56,7 @@ function Login() {
             } else {
                 // ✅ Popup opened successfully — optionally close current tab
                 popup.focus();
-
-                // Wait 5 seconds, then try closing the login tab
-                setTimeout(() => {
-                    window.close();
-                }, 5000);
+                window.close();
             }
         }
     };
