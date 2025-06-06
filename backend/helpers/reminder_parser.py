@@ -70,11 +70,12 @@ def try_schedule_reminder(text, user):
 
             new_task = Task(description=task_desc, scheduled_time=remind_time, user_id=user.id)
             db.session.add(new_task)
+            logger.info(f"New task: {new_task}")
             db.session.commit()
 
             schedule_jobs_for_task(new_task)
 
-            logger.info(f"Reminder jobs scheduled for task '{task_desc}' (ID: {new_task.id})")
+            logger.info(f"Reminder jobs scheduled for task '{task_desc}' (ID: {new_task.id}) at {new_task.scheduled_time}")
             return f"✅ Reminder set for '{task_desc}' at {remind_time.strftime('%I:%M %p')}"
 
     return None

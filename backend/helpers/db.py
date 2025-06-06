@@ -34,6 +34,6 @@ class Task(db.Model):
     reminder_sent_at = db.Column(db.DateTime)
 
     def __repr__(self):
-        return f"<Task {self.id} - {self.description}>"
+        return f"<Task {self.id} - {self.description} - {self.scheduled_time} - {self.status}>"
 
 
