@@ -1,26 +1,26 @@
-import hashlib
-import hmac
-import time
 from datetime import datetime, timedelta
-
 import logger
 from dateutil.parser import isoparse
 from flask_cors import CORS
-
 from helpers.reminder_sender import send_reminder
 from helpers.config import *
-from flask import Flask, request, jsonify, Blueprint
+from flask import Flask, request, jsonify, Blueprint, redirect, session
 import os
 import requests
 import uuid
 import logging
-
 from helpers.job_utils import remove_jobs_for_task, schedule_jobs_for_task
 from helpers.reminder_parser import process_text_command
 from helpers.transcriber import transcribe_audio
 from helpers.db import db, Task, User
 import pytz
+from helpers.google_calendar import get_google_auth_flow, create_event, update_event, delete_event
+from google.oauth2.credentials import Credentials
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
+
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
+
 # Configure logging only once
 logging.basicConfig(
     level=logging.INFO,
@@ -30,6 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 reminders_bp = Blueprint('reminders', __name__)
 CORS(app, supports_credentials=True)
 
@@ -183,7 +184,7 @@ def bot():
 
     except Exception as e:
         logger.error(f"❌ Unexpected error in /bot: {str(e)}")
-        # Try to send fallback error
+        # Try to send a fallback error
         if "chat_id" in locals():
             requests.post(f"{TELEGRAM_API_URL}/sendMessage", json={
                 "chat_id": chat_id,
@@ -275,17 +276,24 @@ def api_create_task():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    new_task = Task(
-        description=description,
-        scheduled_time=scheduled_time,
-        user_id=user.id  # ✅ Use the primary key of the user
-    )
+    if user:
+        new_task = Task(
+            description=description,
+            scheduled_time=scheduled_time,
+            user_id=user.id
+        )
+        db.session.add(new_task)
+        db.session.commit()
 
-    db.session.add(new_task)
-    db.session.commit()
+        if user.google_calendar_integrated:
+            event_id = create_event(user, new_task)
+            if event_id:
+                new_task.google_calendar_event_id = event_id
+                db.session.commit()
 
-    schedule_jobs_for_task(new_task)
-    return jsonify({"message": "Task created", "id": new_task.id}), 201
+        schedule_jobs_for_task(new_task)
+        return jsonify({"message": "Task created", "id": new_task.id}), 201
+    return jsonify({"error": "User not found"}), 404
 
 @app.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
 def api_complete_task(task_id):
@@ -333,10 +341,15 @@ def api_delete_task(task_id):
     if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
-    remove_jobs_for_task(task.id)
-    db.session.delete(task)
-    db.session.commit()
-    return jsonify({"message": f"Task {task.id} deleted."})
+    if user and task.user_id == user.id:
+        if user.google_calendar_integrated:
+            delete_event(user, task)
+
+        remove_jobs_for_task(task.id)
+        db.session.delete(task)
+        db.session.commit()
+        return jsonify({"message": f"Task {task.id} deleted."})
+    return jsonify({"error": "Unauthorized access"}), 403
 
 
 
@@ -360,13 +373,45 @@ def api_edit_task(task_id):
 
     task.scheduled_time = parsed_time
 
+
     if task.status == "done":
         task.status = "pending"
 
-    remove_jobs_for_task(task.id)
-    db.session.commit()
-    schedule_jobs_for_task(task)
-    return jsonify({"message": f"Task {task.id} updated."})
+    if user and task.user_id == user.id:
+        remove_jobs_for_task(task.id)
+        db.session.commit()
+        if user.google_calendar_integrated:
+            update_event(user, task)
+        schedule_jobs_for_task(task)
+        return jsonify({"message": f"Task {task.id} updated."})
+    return jsonify({"error": "Unauthorized access"}), 403
+
+@app.route('/api/google/connect')
+def google_connect():
+    flow = get_google_auth_flow()
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
+    session['state'] = state
+    return redirect(authorization_url)
+
+@app.route('/api/google/callback')
+def google_callback():
+    flow = get_google_auth_flow()
+    flow.fetch_token(authorization_response=request.url)
+
+    credentials = flow.credentials
+    firebase_uid = session.get('firebase_uid')
+    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+
+    if user:
+        user.google_access_token = credentials.token
+        user.google_refresh_token = credentials.refresh_token
+        user.google_calendar_integrated = True
+        db.session.commit()
+        return "Successfully connected to Google Calendar!"
+    return "Error: User not found.", 400
 
 @app.route("/jobs")
 def jobs():
