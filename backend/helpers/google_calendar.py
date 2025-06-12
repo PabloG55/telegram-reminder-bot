@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import logging
 
-# Import the specific config variables we need for the web application
+
 from helpers.config import (
     GOOGLE_WEB_CLIENT_SECRETS_FILE,
     GOOGLE_WEB_CLIENT_ID,
@@ -24,7 +24,7 @@ REDIRECT_URI = f"{os.environ.get('BASE_URL', 'http://localhost:5000')}/api/googl
 def get_google_auth_flow():
     """Initializes the OAuth flow using the specific web client secrets file."""
     return Flow.from_client_secrets_file(
-        GOOGLE_WEB_CLIENT_SECRETS_FILE,  # Use the specific variable for the web secrets file
+        GOOGLE_WEB_CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI
     )
@@ -35,9 +35,7 @@ def _get_credentials_from_user(user):
     if not user.google_calendar_integrated:
         return None
 
-    # This object is used for all API calls.
-    # It needs the client_id and client_secret to be able to refresh the access token
-    # using the refresh_token when it expires.
+
     return Credentials(
         token=user.google_access_token,
         refresh_token=user.google_refresh_token,
