@@ -1,4 +1,3 @@
-.gitignore
 __pycache__/
 *.pyc
 *.env
@@ -7,6 +6,9 @@ venv/
 *.idea
 *google-credentials.json
 *web_whatsapp/
+*client_secret.json
+*mobile/
+mobile/
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
@@ -31,3 +33,4 @@ venv/
 *npm-debug.log*
 *yarn-debug.log*
 *yarn-error.log*
+/mobile/

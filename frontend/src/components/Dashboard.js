@@ -189,6 +189,12 @@ function Dashboard() {
           Logout
         </button>
 
+        {/* Google Calendar */}
+        <a href={`<span class="math-inline">\{backendUrl\}/api/google/connect?uid\=</span>{user.uid}`}
+           className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+          Connect Google Calendar
+        </a>
+        
         <div className="flex items-center justify-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Botifier</h1>
         </div>

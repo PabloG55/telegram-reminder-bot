@@ -17,6 +17,9 @@ class User(db.Model):
     last_name = db.Column(db.String(100))
     photo_url = db.Column(db.String(300))
     joined_at = db.Column(db.DateTime, default=datetime.now(ECUADOR_TZ))
+    google_access_token = db.Column(db.String(512))
+    google_refresh_token = db.Column(db.String(512))
+    google_calendar_integrated = db.Column(db.Boolean, default=False)
     tasks = db.relationship('Task', backref='user', lazy=True)
 
 
@@ -32,6 +35,7 @@ class Task(db.Model):
     followup_sent = db.Column(db.Boolean, default=False)
     current_reminder_type = db.Column(db.String(50), default='initial')
     reminder_sent_at = db.Column(db.DateTime(timezone=True))
+    google_calendar_event_id = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
         return f"<Task {self.id} - {self.description} - {self.scheduled_time} - {self.status}>"
