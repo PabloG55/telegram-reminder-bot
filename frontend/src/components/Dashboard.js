@@ -176,25 +176,27 @@ function Dashboard() {
   return (
 
       <div className="container max-w-4xl mx-auto py-8 px-4 relative">
-        {/* Logout Button */}
-        <button
-            onClick={() => {
-              auth.signOut().then(() => {
-                localStorage.removeItem("tg_id");
-                window.location.href = "/login";
-              });
-            }}
-            className="absolute top-4 right-4 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-        >
-          Logout
-        </button>
+        <div className="absolute top-4 right-4 flex items-center space-x-3">
+          {/* Connect Google Calendar Button */}
+          <a href={`${BASE_URL}/api/google/connect?uid=${uid}`}
+             className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm font-medium shadow-sm">
+            Connect Google Calendar
+          </a>
 
-        {/* Google Calendar */}
-        <a href={`<span class="math-inline">\{backendUrl\}/api/google/connect?uid\=</span>{user.uid}`}
-           className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
-          Connect Google Calendar
-        </a>
-        
+          {/* Logout Button */}
+          <button
+              onClick={() => {
+                auth.signOut().then(() => {
+                  localStorage.removeItem("tg_id");
+                  window.location.href = "/login";
+                });
+              }}
+              className="px-3 py-1 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md text-sm font-medium shadow-sm"
+          >
+            Logout
+          </button>
+        </div>
+
         <div className="flex items-center justify-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Botifier</h1>
         </div>
