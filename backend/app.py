@@ -295,6 +295,7 @@ def api_create_task():
         return jsonify({"message": "Task created", "id": new_task.id}), 201
     return jsonify({"error": "User not found"}), 404
 
+
 @app.route("/api/tasks/<int:task_id>/complete", methods=["POST"])
 def api_complete_task(task_id):
     firebase_uid = request.json.get("user_id")
@@ -304,14 +305,10 @@ def api_complete_task(task_id):
     if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
-    if user and task.user_id == user.id:
-        if user.google_calendar_integrated:
-            delete_event(user, task)
-        remove_jobs_for_task(task.id)
-        task.status = "done"
-        db.session.commit()
-        return jsonify({"message": f"Task {task.id} marked as done."})
-    return jsonify({"error": "Unauthorized access"}), 403
+    remove_jobs_for_task(task.id)
+    task.status = "done"
+    db.session.commit()
+    return jsonify({"message": f"Task {task.id} marked as done."})
 
 
 @app.route("/api/tasks/<int:task_id>/reschedule", methods=["POST"])
@@ -323,25 +320,35 @@ def api_reschedule_task(task_id):
     if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
-    if user and task.user_id == user.id:
-        if task.status == "done":
-            task.status = "pending"
-            remove_jobs_for_task(task.id)
-            db.session.commit()
-            if user.google_calendar_integrated:
+    # Reset status to pending if it was done
+    if task.status == "done":
+        task.status = "pending"
+
+    # Remove old jobs and schedule new ones
+    remove_jobs_for_task(task.id)
+    schedule_jobs_for_task(task)
+
+    # Re-create the calendar event if it was deleted, or update if it exists
+    if user.google_calendar_integrated:
+        if task.google_calendar_event_id:
+            try:
+                # Try to update first
                 update_event(user, task)
-            schedule_jobs_for_task(task)
-            return jsonify({"message": f"Task {task.id} updated."})
-        return jsonify({"error": "Unauthorized access"}), 403
+            except Exception:
+                # If update fails (e.g., event deleted), create a new one
+                event_id = create_event(user, task)
+                task.google_calendar_event_id = event_id
+        else:
+            event_id = create_event(user, task)
+            task.google_calendar_event_id = event_id
 
-
+    db.session.commit()
 
     return jsonify({
         "message": f"Task {task.id} rescheduled",
         "task_id": task.id,
         "scheduled_time": task.scheduled_time.isoformat()
     })
-
 
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 def api_delete_task(task_id):

@@ -34,7 +34,7 @@ function AuthWrapper() {
         });
 
         return () => unsub();
-    }, [navigate]);
+    }, []);
 
     if (loading) {
         return (
