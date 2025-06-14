@@ -176,13 +176,14 @@ function Dashboard() {
   return (
 
       <div className="container max-w-4xl mx-auto py-8 px-4 relative">
-        <div className="absolute top-4 right-4 flex items-center space-x-3">
+        <div className="absolute top-4 left-4 flex items-center space-x-3">
           {/* Connect Google Calendar Button */}
           <a href={`${BASE_URL}/api/google/connect?uid=${uid}`}
              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm font-medium shadow-sm">
             Connect Google Calendar
           </a>
-
+        </div>
+        <div className="absolute top-4 right-4 flex items-center space-x-3">
           {/* Logout Button */}
           <button
               onClick={() => {
