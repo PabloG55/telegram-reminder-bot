@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import logger
 from dateutil.parser import isoparse
 from flask_cors import CORS
-from helpers.reminder_sender import send_reminder
+from helpers.reminder_sender import send_reminder, send_internship_alert
 from helpers.config import *
 from flask import Flask, request, jsonify, Blueprint, redirect, session
 import os
@@ -460,6 +460,21 @@ def google_callback():
         return redirect(f"{frontend_url}/dashboard?google_connected=true")
 
     return "Error: User not found in our database.", 404
+
+@app.route("/api/github-internship-update", methods=["POST"])
+def internship_update():
+    from flask import request, jsonify
+
+    data = request.get_json()
+    if data.get("token") != "internship2026":
+        return jsonify({"error": "unauthorized"}), 403
+
+    msg = data.get("message", "📢 New internship alert!")
+    send_internship_alert(message=msg)
+
+    return jsonify({"ok": True})
+
+
 
 @app.route("/jobs")
 def jobs():
