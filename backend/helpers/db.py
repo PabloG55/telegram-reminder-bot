@@ -40,4 +40,8 @@ class Task(db.Model):
     def __repr__(self):
         return f"<Task {self.id} - {self.description} - {self.scheduled_time} - {self.status}>"
 
+class KeyValueStore(db.Model):
+    key = db.Column(db.String, primary_key=True)
+    value = db.Column(db.Text)
+
 

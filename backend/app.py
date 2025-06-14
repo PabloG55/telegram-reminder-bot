@@ -2,7 +2,9 @@ from datetime import datetime, timedelta
 import logger
 from dateutil.parser import isoparse
 from flask_cors import CORS
-from helpers.reminder_sender import send_reminder, send_internship_alert
+
+from helpers.internship_sender import send_internship_alert
+from helpers.reminder_sender import send_reminder
 from helpers.config import *
 from flask import Flask, request, jsonify, Blueprint, redirect, session
 import os
@@ -305,11 +307,15 @@ def api_complete_task(task_id):
     if not user or task.user_id != user.id:
         return jsonify({"error": "Unauthorized access"}), 403
 
-    remove_jobs_for_task(task.id)
-    task.status = "done"
-    db.session.commit()
-    return jsonify({"message": f"Task {task.id} marked as done."})
+    if user and task.user_id == user.id:
+        if user.google_calendar_integrated:
+            delete_event(user, task)
 
+        remove_jobs_for_task(task.id)
+        task.status = "done"
+        db.session.commit()
+        return jsonify({"message": f"Task {task.id} marked as done."})
+    return jsonify({"error": "Unauthorized access"}), 403
 
 @app.route("/api/tasks/<int:task_id>/reschedule", methods=["POST"])
 def api_reschedule_task(task_id):
@@ -456,25 +462,17 @@ def google_callback():
         db.session.commit()
 
         # Redirect the user back to the frontend dashboard.
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-        return redirect(f"{frontend_url}/dashboard?google_connected=true")
+        return redirect(f"https://whatsapp-reminder-frontend.vercel.app/dashboard?connected=true")
 
     return "Error: User not found in our database.", 404
 
 @app.route("/api/github-internship-update", methods=["POST"])
 def internship_update():
-    from flask import request, jsonify
-
     data = request.get_json()
     if data.get("token") != "internship2026":
         return jsonify({"error": "unauthorized"}), 403
-
-    msg = data.get("message", "📢 New internship alert!")
-    send_internship_alert(message=msg)
-
+    send_internship_alert()
     return jsonify({"ok": True})
-
-
 
 @app.route("/jobs")
 def jobs():

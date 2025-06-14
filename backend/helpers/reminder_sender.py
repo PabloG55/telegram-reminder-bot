@@ -45,32 +45,3 @@ def send_reminder(task, followup=False):
     except Exception as e:
         logger.error(f"❌ Error sending Telegram reminder for task {task.id}: {str(e)}")
         raise
-
-def send_internship_alert(message="📢 A new internship was added! Check the GitHub list."):
-    logger.info("📤 Sending internship alert")
-
-    try:
-        with app.app_context():
-            from helpers.db import User
-            users = User.query.filter(User.telegram_id.isnot(None)).all()
-
-            if not users:
-                logger.warning("⚠️ No users with telegram_id found")
-                return
-
-            for user in users:
-                payload = {
-                    "chat_id": user.telegram_id,
-                    "text": message
-                }
-                url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                response = requests.post(url, json=payload)
-
-                if response.ok:
-                    logger.info(f"✅ Sent internship alert to user {user.id}")
-                else:
-                    logger.error(f"❌ Failed to send to {user.id}: {response.text}")
-
-    except Exception as e:
-        logger.error(f"❌ Error sending internship alert: {str(e)}")
-        raise
