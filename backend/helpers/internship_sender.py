@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import hashlib
 import requests
 import logging
 from flask import current_app as app
@@ -11,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 INTERNSHIP_LIST_URL = "https://raw.githubusercontent.com/vanshb03/Summer2026-Internships/dev/README.md"
 
+def compute_hash(internship):
+    data = f"{internship['company']}|{internship['role']}|{internship['url']}|{internship['date']}"
+    return hashlib.sha256(data.encode()).hexdigest()
 
 def parse_latest_internship():
     response = requests.get(INTERNSHIP_LIST_URL)
@@ -29,29 +33,26 @@ def parse_latest_internship():
 
         if table_started and line.strip().startswith("|"):
             parts = [p.strip() for p in line.strip().split("|")[1:-1]]
-            if len(parts) >= 4:
-                company_raw = parts[0]
+            if len(parts) >= 5:
+                company = parts[0]
                 role = parts[1]
+                location = parts[2]
                 link_raw = parts[3]
-                date = parts[4] if len(parts) > 4 else "N/A"
+                date = parts[4]
 
-                # Extract company name
-                match = re.search(r'\[(.*?)\]\((.*?)\)', company_raw)
-                company = match.group(1) if match else company_raw
-
-                # Extract application link
+                # Extract application link from HTML anchor tag
                 url_match = re.search(r'href="(.*?)"', link_raw)
                 apply_link = url_match.group(1) if url_match else "https://github.com/vanshb03/Summer2026-Internships"
 
                 internships.append({
                     "company": company,
                     "role": role,
+                    "location": location,
                     "url": apply_link,
                     "date": date
                 })
 
     return internships[0] if internships else None
-
 
 def load_last_internship():
     record = KeyValueStore.query.get("last_internship")
@@ -63,21 +64,19 @@ def load_last_internship():
             return None
     return None
 
-
 def save_last_internship(internship):
     record = KeyValueStore.query.get("last_internship")
     if not record:
         record = KeyValueStore(key="last_internship")
 
+    internship_hash = compute_hash(internship)
+
     record.value = json.dumps({
-        "company": internship["company"],
-        "role": internship["role"],
-        "date": internship["date"]
+        "hash": internship_hash
     })
 
     db.session.add(record)
     db.session.commit()
-
 
 def send_internship_alert():
     logger.info("📤 Checking internship list...")
@@ -91,20 +90,21 @@ def send_internship_alert():
 
             # Check if already sent
             last = load_last_internship()
-            if last and (
-                last["company"] == internship["company"] and
-                last["role"] == internship["role"] and
-                last["date"] == internship["date"]
-            ):
+            current_hash = compute_hash(internship)
+
+            if last and last.get("hash") == current_hash:
                 logger.info("⏩ No new internship to notify about.")
                 return
 
             # Compose message
-            message = f"""📢 *New Internship Alert!*  
-                    🏢 *Company:* {internship['company']}  
-                    💼 *Role:* {internship['role']}  
-                    📅 *Posted:* {internship['date']}  
-                    🔗 [Apply here]({internship['url']})"""
+            message = (
+                f"📢 *New Internship Alert!*\n"
+                f"🏢 *Company:* {internship['company']}\n"
+                f"💼 *Role:* {internship['role']}\n"
+                f"📍 *Location:* {internship['location']}\n"
+                f"📅 *Posted:* {internship['date']}\n"
+                f"🔗 [Apply here]({internship['url']})"
+            )
 
             users = User.query.filter(User.telegram_id.isnot(None)).all()
             if not users:

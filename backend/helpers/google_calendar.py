@@ -18,7 +18,7 @@ from helpers.config import (
 logger = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-REDIRECT_URI = f"{os.environ.get('BASE_URL', 'http://localhost:5000')}/api/google/callback"
+REDIRECT_URI = f"{os.environ.get('BASE_URL')}/api/google/callback"
 
 
 def get_google_auth_flow():
