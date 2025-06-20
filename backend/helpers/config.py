@@ -1,17 +1,24 @@
 import os
+import json
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load .env only if running locally
+if os.path.exists(".env"):
+    load_dotenv()
 
-# Validate environment variables
-if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and not os.getenv("GOOGLE_WEB_CLIENT_SECRETS_FILE"):
-    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable not set")
+# Create the credential file from env var (only on Heroku)
+if os.getenv("GOOGLE_CREDENTIALS_JSON"):
+    with open("google-credentials.json", "w") as f:
+        f.write(os.getenv("GOOGLE_CREDENTIALS_JSON"))
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google-credentials.json"
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-os.environ["GOOGLE_WEB_CLIENT_SECRETS_FILE"] = os.getenv("GOOGLE_WEB_CLIENT_SECRETS_FILE")
+# Optional: do the same for the web client if needed
+if os.getenv("GOOGLE_WEB_CLIENT_JSON"):
+    with open("client_secret.json", "w") as f:
+        f.write(os.getenv("GOOGLE_WEB_CLIENT_JSON"))
+    os.environ["GOOGLE_WEB_CLIENT_SECRETS_FILE"] = "client_secret.json"
 
-
+# Read other config vars
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 GOOGLE_WEB_CLIENT_SECRETS_FILE = os.getenv("GOOGLE_WEB_CLIENT_SECRETS_FILE")
 GOOGLE_WEB_CLIENT_ID = os.getenv("GOOGLE_WEB_CLIENT_ID")
