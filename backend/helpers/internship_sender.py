@@ -10,123 +10,146 @@ from helpers.config import TELEGRAM_BOT_TOKEN
 
 logger = logging.getLogger(__name__)
 
-INTERNSHIP_LIST_URL = "https://raw.githubusercontent.com/vanshb03/Summer2026-Internships/dev/README.md"
+# Corrected raw URL for the README file (without '/blob/')
+INTERNSHIP_LIST_URL = "https://raw.githubusercontent.com/PabloG55/testUp/dev/README.md"
+
 
 def compute_hash(internship):
-    data = f"{internship['company']}|{internship['role']}|{internship['url']}|{internship['date']}"
+    """Computes a unique hash for an internship to avoid duplicate notifications."""
+    data = f"{internship.get('company')}|{internship.get('role')}|{internship.get('url')}|{internship.get('date')}"
     return hashlib.sha256(data.encode()).hexdigest()
 
-def parse_latest_internship():
-    response = requests.get(INTERNSHIP_LIST_URL)
-    if not response.ok:
-        logger.error("❌ Failed to fetch internship list")
-        return None
+
+def parse_internships():
+    """
+    Fetches the README from GitHub, parses the markdown table, and returns a list of all internships.
+    This version correctly handles sub-roles and cleans HTML from fields.
+    """
+    try:
+        response = requests.get(INTERNSHIP_LIST_URL)
+        response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Failed to fetch internship list: {e}")
+        return []
 
     lines = response.text.splitlines()
     table_started = False
     internships = []
+    last_company = ""  # Used to remember the company for sub-roles (lines with ↳)
 
     for line in lines:
-        if line.strip().startswith("| Company | Role | Location"):
+        if "| Company | Role | Location" in line:
             table_started = True
             continue
 
-        if table_started and line.strip().startswith("|"):
-            parts = [p.strip() for p in line.strip().split("|")[1:-1]]
-            if len(parts) >= 5:
-                company = parts[0]
-                role = parts[1]
-                location = parts[2]
-                link_raw = parts[3]
-                date = parts[4]
+        if not table_started or not line.strip().startswith("|"):
+            continue
 
-                # Extract application link from HTML anchor tag
-                url_match = re.search(r'href="(.*?)"', link_raw)
-                apply_link = url_match.group(1) if url_match else "https://github.com/vanshb03/Summer2026-Internships"
+        parts = [p.strip() for p in line.strip().split("|")[1:-1]]
+        if len(parts) < 5:
+            continue
 
-                internships.append({
-                    "company": company,
-                    "role": role,
-                    "location": location,
-                    "url": apply_link,
-                    "date": date
-                })
+        company_raw, role, location_raw, link_raw, date = parts[:5]
 
-    return internships[0] if internships else None
+        # If the line is a sub-role, use the last known company name
+        company = last_company if '↳' in company_raw else company_raw
+        last_company = company if '↳' not in company_raw else last_company
 
-def load_last_internship():
-    record = KeyValueStore.query.get("last_internship")
-    if record:
-        try:
-            return json.loads(record.value)
-        except json.JSONDecodeError:
-            logger.warning("⚠️ Could not decode last_internship JSON")
-            return None
-    return None
+        # Clean HTML tags and line breaks from the location field
+        location = re.sub(r'<.*?>', '', location_raw).replace('</br>', ', ')
 
-def save_last_internship(internship):
-    record = KeyValueStore.query.get("last_internship")
-    if not record:
-        record = KeyValueStore(key="last_internship")
+        # Extract the application URL from the HTML anchor tag
+        url_match = re.search(r'href="(.*?)"', link_raw)
+        apply_link = url_match.group(1) if url_match else "https://github.com/vanshb03/Summer2026-Internships"
 
-    internship_hash = compute_hash(internship)
+        internships.append({
+            "company": company,
+            "role": role,
+            "location": location,
+            "url": apply_link,
+            "date": date
+        })
 
-    record.value = json.dumps({
-        "hash": internship_hash
-    })
+    logger.info(f"✅ Parsed {len(internships)} internships from the list.")
+    return internships
 
+
+def load_last_sent_hash():
+    """Loads the hash of the last successfully sent internship from the database."""
+    record = KeyValueStore.query.get("last_internship_hash")
+    return record.value if record else None
+
+
+def save_last_sent_hash(internship_hash):
+    """Saves the hash of the most recent internship sent to the database."""
+    record = KeyValueStore.query.get("last_internship_hash") or KeyValueStore(key="last_internship_hash")
+    record.value = internship_hash
     db.session.add(record)
     db.session.commit()
 
-def send_internship_alert():
-    logger.info("📤 Checking internship list...")
 
+def send_internship_alert():
+    """
+    Main function to check for new internships and send Telegram alerts for each one.
+    """
+    logger.info("📤 Checking for new internships...")
     try:
         with app.app_context():
-            internship = parse_latest_internship()
-            if not internship:
-                logger.warning("⚠️ No internship found to send")
+            all_internships = parse_internships()
+            if not all_internships:
                 return
 
-            # Check if already sent
-            last = load_last_internship()
-            current_hash = compute_hash(internship)
+            last_hash = load_last_sent_hash()
+            new_internships = []
 
-            if last and last.get("hash") == current_hash:
-                logger.info("⏩ No new internship to notify about.")
+            # Find all internships newer than the last one sent
+            for internship in all_internships:
+                current_hash = compute_hash(internship)
+                if current_hash == last_hash:
+                    break  # Stop when we reach the last internship we notified about
+                new_internships.append(internship)
+
+            if not new_internships:
+                logger.info("⏩ No new internships to send.")
                 return
-
-            # Compose message
-            message = (
-                f"📢 *New Internship Alert!*\n"
-                f"🏢 *Company:* {internship['company']}\n"
-                f"💼 *Role:* {internship['role']}\n"
-                f"📍 *Location:* {internship['location']}\n"
-                f"📅 *Posted:* {internship['date']}\n"
-                f"🔗 [Apply here]({internship['url']})"
-            )
 
             users = User.query.filter(User.telegram_id.isnot(None)).all()
             if not users:
-                logger.warning("⚠️ No users with telegram_id found")
+                logger.warning("⚠️ No users with a telegram_id found to notify.")
+                # If there are no users, we can just save the latest hash and exit
+                save_last_sent_hash(compute_hash(new_internships[0]))
                 return
 
-            for user in users:
-                payload = {
-                    "chat_id": user.telegram_id,
-                    "text": message,
-                    "parse_mode": "Markdown"
-                }
-                url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                response = requests.post(url, json=payload)
+            # Reverse the list to send the oldest new internship first
+            for internship in reversed(new_internships):
+                message = (
+                    f"📢 *New Internship Alert!*\n\n"
+                    f"🏢 *Company:* {internship['company']}\n"
+                    f"� *Role:* {internship['role']}\n"
+                    f"📍 *Location:* {internship['location']}\n"
+                    f"📅 *Posted:* {internship['date']}\n\n"
+                    f"🔗 [Apply Here]({internship['url']})"
+                )
 
-                if response.ok:
-                    logger.info(f"✅ Sent internship alert to user {user.id}")
-                else:
-                    logger.error(f"❌ Failed to send to {user.id}: {response.text}")
+                for user in users:
+                    payload = {
+                        "chat_id": user.telegram_id,
+                        "text": message,
+                        "parse_mode": "Markdown"
+                    }
+                    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                    response = requests.post(url, json=payload)
 
-            save_last_internship(internship)
+                    if response.ok:
+                        logger.info(f"✅ Sent alert for {internship['company']} to user {user.id}")
+                    else:
+                        logger.error(f"❌ Failed to send to {user.id}: {response.text}")
+
+            # After sending all notifications, save the hash of the most recent internship
+            latest_hash = compute_hash(new_internships[0])
+            save_last_sent_hash(latest_hash)
+            logger.info(f"💾 Saved latest hash: {latest_hash}")
 
     except Exception as e:
-        logger.error(f"❌ Error sending internship alert: {str(e)}")
+        logger.error(f"❌ An unexpected error occurred: {e}", exc_info=True)
         raise
